@@ -61,6 +61,13 @@
             <field name="model">animal.visit</field>
             <field name="arch" type="xml">
                 <form>
+                    <header>
+                        <!-- Botón para imprimir PDF de la Ficha Atención -->
+                        <button name="%(action_report_visit)d"
+                                type="action"
+                                class="btn-primary"
+                                string="Imprimir Ficha"/>
+                    </header>
                     <sheet>
                         <!-- Referencia arriba como título -->
                         <group>

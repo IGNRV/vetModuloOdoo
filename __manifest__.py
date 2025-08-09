@@ -11,9 +11,6 @@ Manage the animals that visit our veterinarian
     'author': "Javier Diez",
     'website': "https://javierdiez.netlify.app/",
     'license': 'AGPL-3',
-    # Categories can be used to filter modules in modules listing
-    # Check https://github.com/odoo/odoo/blob/15.0/odoo/addons/base/data/ir_module_category_data.xml
-    # for the full list
     'category': 'Animales',
     'version': '1.0',
 
@@ -24,23 +21,24 @@ Manage the animals that visit our veterinarian
     'data': [
         'security/ir.model.access.csv',
 
-        # Vistas base
+        # === Reportes (deben cargarse ANTES de las vistas que referencian sus acciones) ===
+        'report/sterilization_report.xml',
+        'report/visit_report.xml',          # <-- acción + plantilla PDF de Visitas
+
+        # === Vistas base ===
         'views/animals_views.xml',
         'views/medicines_views.xml',
         'views/allergies_views.xml',
         'views/surgeries_views.xml',
         'views/vaccines_views.xml',
         'views/insurances_views.xml',
-        'views/visits_views.xml',
+        'views/visits_views.xml',           # <-- ahora viene DESPUÉS del reporte
         'views/species_views.xml',
         'views/breeds_views.xml',
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
 
-        # Reportes
-        'report/sterilization_report.xml',   # <-- NUEVO: acción + plantilla PDF
-
-        # IMPORTANTE: Definir la acción de Esterilizaciones ANTES del menú que la usa
+        # IMPORTANTE: acción de Esterilizaciones ya está arriba; aquí la vista que la usa
         'views/sterilizations_views.xml',
 
         # Menús (usa acciones ya definidas arriba)
@@ -57,6 +55,6 @@ Manage the animals that visit our veterinarian
     ],
     "images": ['static/images/banner.png', 'static/description/icon.png'],
     'installable': True,
-    'application': True,  # Esto indica que tu módulo es una aplicación.
+    'application': True,
     'auto_install': False,
 }
