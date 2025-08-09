@@ -303,6 +303,7 @@ from . import models
 
 
 === ./views/animals_views.xml ===
+=== ./views/animals_views.xml ===
 <odoo>
   <data>
 
@@ -409,6 +410,12 @@ from . import models
                 <field name="breed" />
               </group>
             </group>
+
+            <!-- NUEVO: Motivo de consulta en la ficha del animal -->
+            <group string="Motivo de la visita">
+              <field name="consultation_reason" placeholder="Describa el motivo de consulta..." />
+            </group>
+
             <notebook>
               <page string="Visitas">
                 <field name="visit_ids">
@@ -898,7 +905,8 @@ class Animal(models.Model):
     invoice_count = fields.Integer(string="Facturas", compute="_compute_invoice_count")
     visit_count = fields.Integer(string="Visits", compute="_compute_visit_count")
 
-
+    # NUEVO: Motivo de consulta en la ficha del animal
+    consultation_reason = fields.Text(string="Motivo de consulta", tracking=True)
 
     @api.model
     def create(self, vals):

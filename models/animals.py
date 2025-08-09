@@ -6,7 +6,7 @@ class Animal(models.Model):
     _name = "animal"
     _description = "Animals table"
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order ="identification desc"
+    _order = "identification desc"
 
     name = fields.Char(string="Nombre", required=True)
     sex = fields.Selection([
@@ -40,7 +40,8 @@ class Animal(models.Model):
     invoice_count = fields.Integer(string="Facturas", compute="_compute_invoice_count")
     visit_count = fields.Integer(string="Visits", compute="_compute_visit_count")
 
-
+    # NUEVO: Motivo de consulta
+    consultation_reason = fields.Text(string="Motivo de consulta", tracking=True)
 
     @api.model
     def create(self, vals):
@@ -73,9 +74,7 @@ class Animal(models.Model):
                 record.visit_count = 0
 
     def action_view_quotes(self):
-        # Obtener el ID del partner asociado
         partner_id = self.owner.id
-
         return {
             'name': 'Quotes',
             'type': 'ir.actions.act_window',
@@ -86,9 +85,7 @@ class Animal(models.Model):
         }
 
     def action_view_invoices(self):
-        # Obtener el ID del partner asociado
         partner_id = self.owner.id
-
         return {
             'name': 'Invoices',
             'type': 'ir.actions.act_window',
@@ -99,9 +96,7 @@ class Animal(models.Model):
         }
 
     def action_view_visits(self):
-        # Obtener el ID del partner asociado
         animal = self.id
-
         return {
             'name': 'Visits',
             'type': 'ir.actions.act_window',
@@ -112,10 +107,8 @@ class Animal(models.Model):
         }
 
     def action_create_quote(self):
-        # Asegurarse de que el animal tiene un dueño
         if not self.owner:
             raise UserError('This animal does not have an owner defined.')
-
         return {
             'type': 'ir.actions.act_window',
             'name': 'Nuevo Quote',
@@ -123,6 +116,6 @@ class Animal(models.Model):
             'view_mode': 'form',
             'target': 'current',
             'context': {
-                'default_partner_id': self.owner.id,  # Prellenar el cliente con el dueño del animal
+                'default_partner_id': self.owner.id,
             },
         }
