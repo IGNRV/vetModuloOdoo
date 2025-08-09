@@ -11,16 +11,16 @@
           <field name="breed" />
           <field name="species" />
           <field name="identification" />
-          <field name="tags" />
-          <field name="insurance" />
+          <field name="microchip_number" string="N° de microchip"/>
+          <field name="age" string="Edad"/>
+          <field name="reproductive_status" string="Esterilizado/Entero"/>
+          <field name="tags" string="Color"/>
           <field name="internal_notes" />
           <group>
             <filter name="visited" string="Visited" domain="[('visit_ids', '>' , '0')]" />
             <filter name="surgeries" string="With surgeries" domain="[('surgeries', '>' , '0')]" />
             <filter name="archived" string="Archived"
               domain="[('active', '!=' , 'true')]" />
-
-
           </group>
           <group expand="0" string="Animal info">
             <filter name="owner" string="Dueño" domain="[('owner', '=' , 'self')]"
@@ -33,8 +33,6 @@
               context="{'group_by':'size'}" />
             <filter name="sex" string="Sexo" domain="[('sex', '=' , 'self')]"
               context="{'group_by':'sex'}" />
-            <filter name="insurance" string="Seguro" domain="[('insurance', '=' , 'self')]"
-              context="{'group_by':'insurance'}" />
           </group>
         </search>
       </field>
@@ -46,11 +44,14 @@
       <field name="arch" type="xml">
         <tree>
           <field name="identification" />
+          <field name="microchip_number" string="N° de microchip"/>
           <field name="name" />
           <field name="owner" />
           <field name="breed" />
           <field name="species" />
           <field name="sex" />
+          <field name="age" string="Edad"/>
+          <field name="reproductive_status" string="Esterilizado/Entero"/>
         </tree>
       </field>
     </record>
@@ -61,7 +62,6 @@
       <field name="arch" type="xml">
         <form>
           <header>
-            <!-- Botón para crear presupuesto -->
             <button name="action_create_quote" type="object" string="Crear Presupuesto"
               class="btn-primary"
             />
@@ -95,6 +95,9 @@
                 <field name="identification" />
               </group>
               <group>
+                <field name="microchip_number" string="N° de microchip"/>
+              </group>
+              <group>
                 <field name="owner" />
               </group>
               <group>
@@ -126,20 +129,22 @@
                 </field>
               </page>
 
-
               <page string="Medicamentos">
                 <field name="medicines" />
-
               </page>
+
               <page string="Vacunas">
                 <field name="vaccines" />
               </page>
+
               <page string="Alergias">
                 <field name="allergies" />
               </page>
+
               <page string="Cirugías">
                 <field name="surgeries" />
               </page>
+
               <page string="Otras informaciones">
                 <group>
                   <group>
@@ -157,7 +162,12 @@
                   <group>
                     <field name="birthdate" />
                   </group>
-
+                  <group>
+                    <field name="age" string="Edad"/>
+                  </group>
+                  <group>
+                    <field name="reproductive_status" string="Esterilizado/Entero"/>
+                  </group>
                 </group>
                 <group>
                   <div class="d-flex">
@@ -168,10 +178,7 @@
                   </div>
 
                   <group>
-                    <field name="tags" widget="many2many_tags" options="{'color_field': 'color'}" />
-                  </group>
-                  <group>
-                    <field name="insurance" />
+                    <field name="tags" string="Color" widget="many2many_tags" options="{'color_field': 'color'}" />
                   </group>
                   <group>
                     <field name="active" />
@@ -208,9 +215,7 @@
                       <div>
                         <field name="name" /> (<field name="species" />) </div>
                     </strong>
-                    <div> Dueño: <field name="owner" />
-                    </div>
-
+                    <div> Dueño: <field name="owner" /></div>
                   </div>
                 </div>
                 <div>

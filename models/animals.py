@@ -6,7 +6,7 @@ class Animal(models.Model):
     _name = "animal"
     _description = "Animals table"
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order ="identification desc"
+    _order = "identification desc"
 
     name = fields.Char(string="Nombre", required=True)
     sex = fields.Selection([
@@ -14,6 +14,14 @@ class Animal(models.Model):
         ('female', 'Femenino')
     ], string="Sexo", default="male")
     birthdate = fields.Date(string="Fecha de Nacimiento")
+    # NUEVOS CAMPOS
+    age = fields.Integer(string="Edad")
+    reproductive_status = fields.Selection([
+        ('neutered', 'Esterilizado'),
+        ('entire', 'Entero'),
+    ], string="Esterilizado/Entero")
+    microchip_number = fields.Char(string="N° de microchip")
+
     photo = fields.Binary(string="Foto")
     breed = fields.Many2one("animal.breed", string="Raza")
     species = fields.Many2one("animal.specie", string="Especie", required=True)
@@ -38,9 +46,7 @@ class Animal(models.Model):
     internal_notes = fields.Text(string="Notas")
     quote_count = fields.Integer(string="Presupuestos", compute="_compute_quote_count")
     invoice_count = fields.Integer(string="Facturas", compute="_compute_invoice_count")
-    visit_count = fields.Integer(string="Visits", compute="_compute_visit_count")
-
-
+    visit_count = fields.Integer(string="Visitas", compute="_compute_visit_count")
 
     @api.model
     def create(self, vals):
@@ -77,7 +83,7 @@ class Animal(models.Model):
         partner_id = self.owner.id
 
         return {
-            'name': 'Quotes',
+            'name': 'Presupuestos',
             'type': 'ir.actions.act_window',
             'view_mode': 'tree,form',
             'res_model': 'sale.order',
@@ -90,7 +96,7 @@ class Animal(models.Model):
         partner_id = self.owner.id
 
         return {
-            'name': 'Invoices',
+            'name': 'Facturas',
             'type': 'ir.actions.act_window',
             'view_mode': 'tree,form',
             'res_model': 'account.move',
@@ -103,7 +109,7 @@ class Animal(models.Model):
         animal = self.id
 
         return {
-            'name': 'Visits',
+            'name': 'Visitas',
             'type': 'ir.actions.act_window',
             'view_mode': 'tree,form',
             'res_model': 'animal.visit',
@@ -118,7 +124,7 @@ class Animal(models.Model):
 
         return {
             'type': 'ir.actions.act_window',
-            'name': 'Nuevo Quote',
+            'name': 'Nuevo Presupuesto',
             'res_model': 'sale.order',
             'view_mode': 'form',
             'target': 'current',

@@ -1,0 +1,1093 @@
+
+
+=== ./combined.txt ===
+
+
+=== ./__init__.py ===
+# -*- coding: utf-8 -*-
+
+from . import controllers
+from . import models
+
+
+=== ./demo/demo.xml ===
+<odoo>
+    <data>
+<!--
+          <record id="object0" model="vet.vet">
+            <field name="name">Object 0</field>
+            <field name="value">0</field>
+          </record>
+
+          <record id="object1" model="vet.vet">
+            <field name="name">Object 1</field>
+            <field name="value">10</field>
+          </record>
+
+          <record id="object2" model="vet.vet">
+            <field name="name">Object 2</field>
+            <field name="value">20</field>
+          </record>
+
+          <record id="object3" model="vet.vet">
+            <field name="name">Object 3</field>
+            <field name="value">30</field>
+          </record>
+
+          <record id="object4" model="vet.vet">
+            <field name="name">Object 4</field>
+            <field name="value">40</field>
+          </record>
+-->
+    </data>
+</odoo>
+
+
+=== ./views/visits_views.xml ===
+<odoo>
+    <data>
+
+        <record id="animal_visit_search_view" model="ir.ui.view">
+            <field name="name">animal.visit.search.view</field>
+            <field name="model">animal.visit</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name" />
+                    <field name="owner" />
+                    <field name="sequence" />
+
+                    <!-- Reemplazamos campos antiguos por los nuevos en búsqueda -->
+                    <field name="consultation_reason" string="Motivo de consulta" />
+                    <field name="anamnesis" string="Anamnesis Remota y Actual" />
+                    <field name="clinical_exam" string="Examen Clínico" />
+                    <field name="prediagnoses" string="Prediagnósticos" />
+                    <field name="treatment" string="Tratamiento" />
+                    <field name="rp" string="Rp" />
+                    <field name="follow_up" string="Control" />
+
+                    <group expand="0" string="Visit info">
+                        <filter name="animal_id" string="Animal" domain="[('animal_id','=','self')]"
+                            context="{'group_by':'animal_id'}" />
+                        <filter name="owner" string="Dueño" domain="[('owner', '=' , 'self')]"
+                            context="{'group_by':'owner'}" />
+                        <filter name="sex" string="Sexo" domain="[('sex', '=' , 'self')]"
+                            context="{'group_by':'sex'}" />
+                        <filter name="specie" string="Especie" domain="[('specie', '=' , 'self')]"
+                            context="{'group_by':'specie'}" />
+                        <filter name="breed" string="Raza" domain="[('breed', '=' , 'self')]"
+                            context="{'group_by':'breed'}" />
+                        <field name="date" />
+                        <filter name="group_by_date" string="Fecha"
+                            context="{'group_by': 'date:month'}" />
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="visit_tree_view" model="ir.ui.view">
+            <field name="name">animal.visit.tree.view</field>
+            <field name="model">animal.visit</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="sequence" />
+                    <field name="animal_id" />
+                    <field name="owner" />
+                    <!-- Mostrar un resumen con los nuevos campos más relevantes -->
+                    <field name="consultation_reason" string="Motivo de consulta" />
+                    <field name="treatment" string="Tratamiento" />
+                    <field name="date" />
+                </tree>
+            </field>
+        </record>
+
+        <record id="visit_form_view" model="ir.ui.view">
+            <field name="name">animal.visit.form.view</field>
+            <field name="model">animal.visit</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <field class="fs-1" name="sequence" />
+                            <group>
+                                <field name="animal_id" />
+                            </group>
+                            <group>
+                                <field name="owner" />
+                            </group>
+                            <group>
+                                <field name="date" />
+                            </group>
+
+                            <!-- ===== FICHA CLÍNICA en dos columnas ===== -->
+                            <group string="Ficha Clínica">
+                                <!-- Columna izquierda -->
+                                <group>
+                                    <field name="consultation_reason" placeholder="Describa el motivo de la consulta..." />
+                                    <field name="clinical_exam" placeholder="Hallazgos del examen clínico..." />
+                                    <field name="treatment" placeholder="Tratamiento indicado..." />
+                                    <field name="follow_up" placeholder="Fecha/Indicaciones de control..." />
+                                </group>
+                                <!-- Columna derecha -->
+                                <group>
+                                    <field name="anamnesis" placeholder="Antecedentes remotos y actuales relevantes..." />
+                                    <field name="prediagnoses" placeholder="Listado de diagnósticos presuntivos..." />
+                                    <field name="rp" placeholder="Receta / prescripción (Rp)..." />
+                                </group>
+                            </group>
+
+                            <!-- Campos antiguos mantenidos (opcional, puedes ocultarlos si ya no se usan)
+                            <group string="(Histórico)">
+                                <field name="reason" />
+                                <field name="suggested_treatment" />
+                                <field name="observations" />
+                            </group>
+                            -->
+                        </group>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field widget="mail_thread" name="message_ids" />
+                        <field widget="mail_activity" name="activity_ids" />
+                    </div>
+                </form>
+            </field>
+        </record>
+
+        <record id="animal_visit_kanban_view" model="ir.ui.view">
+            <field name="name">animal.visit.kanban.view</field>
+            <field name="model">animal.visit</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_mobile" sample="1">
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div t-attf-class="oe_kanban_global_click">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <strong>
+                                            <field name="sequence" />
+                                        </strong>
+                                        <div><strong> Animal</strong>: <field name="animal_id" /></div>
+                                    </div>
+                                </div>
+                                <hr class="my-2"/>
+                                <div class="mb-2">
+                                    <strong>Motivo:</strong>
+                                    <span><field name="consultation_reason"/></span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>Dueño</strong>: <field name="owner" />
+                                    </div>
+                                    <field name="activity_ids" widget="kanban_activity" />
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <record id="visit_action" model="ir.actions.act_window">
+            <field name="name">Visitas</field>
+            <field name="res_model">animal.visit</field>
+            <field name="view_mode">search,tree,form,kanban,pivot</field>
+        </record>
+    </data>
+</odoo>
+
+=== ./views/tags_views.xml ===
+<odoo>
+    <data>
+
+        <record id="tag_action" model="ir.actions.act_window">
+            <field name="name">Etiquetas</field>
+            <field name="res_model">animal.tag</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/insurances_views.xml ===
+<odoo>
+    <data>
+
+        <record id="insurance_action" model="ir.actions.act_window">
+            <field name="name">Seguros</field>
+            <field name="res_model">animal.insurance</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/animals_identification.xml ===
+<odoo>
+    <data noupdate="1">
+        <!-- Secuencia para el modelo animal.visit -->
+        <record id="animal_id" model="ir.sequence">
+            <field name="name">Identificación de Animal</field>
+            <field name="code">animal.identification</field>
+            <field name="prefix">ID/</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
+        </record>
+    </data>
+</odoo>
+    
+
+=== ./views/breeds_views.xml ===
+<odoo>
+    <data>
+
+        <record id="breed_tree_view" model="ir.ui.view">
+            <field name="name">animal.breed.tree.view</field>
+            <field name="model">animal.breed</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="name"/>
+                    <field name="specie"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="breed_action" model="ir.actions.act_window">
+            <field name="name">Razas</field>
+            <field name="res_model">animal.breed</field>
+            <field name="view_mode">tree,form,kanban</field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/surgeries_views.xml ===
+<odoo>
+    <data>
+
+        <record id="surgery_action" model="ir.actions.act_window">
+            <field name="name">Cirugías</field>
+            <field name="res_model">animal.surgery</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/vaccines_views.xml ===
+<odoo>
+    <data>
+
+        <record id="vaccine_action" model="ir.actions.act_window">
+            <field name="name">Vacunas</field>
+            <field name="res_model">animal.vaccine</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/species_views.xml ===
+<odoo>
+    <data>
+
+        <record id="specie_action" model="ir.actions.act_window">
+            <field name="name">Especies</field>
+            <field name="res_model">animal.specie</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/medicines_views.xml ===
+<odoo>
+    <data>
+
+        <record id="medicine_action" model="ir.actions.act_window">
+            <field name="name">Medicamentos</field>
+            <field name="res_model">animal.medicine</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/allergies_views.xml ===
+<odoo>
+    <data>
+
+        <record id="allergy_action" model="ir.actions.act_window">
+            <field name="name">Alergias</field>
+            <field name="res_model">animal.allergy</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/animals_views.xml ===
+<odoo>
+  <data>
+
+    <record id="vet_search_view" model="ir.ui.view">
+      <field name="name">animal.search.view</field>
+      <field name="model">animal</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="name" />
+          <field name="owner" />
+          <field name="breed" />
+          <field name="species" />
+          <field name="identification" />
+          <field name="microchip_number" string="N° de microchip"/>
+          <field name="age" string="Edad"/>
+          <field name="reproductive_status" string="Esterilizado/Entero"/>
+          <field name="tags" string="Color"/>
+          <field name="internal_notes" />
+          <group>
+            <filter name="visited" string="Visited" domain="[('visit_ids', '>' , '0')]" />
+            <filter name="surgeries" string="With surgeries" domain="[('surgeries', '>' , '0')]" />
+            <filter name="archived" string="Archived"
+              domain="[('active', '!=' , 'true')]" />
+          </group>
+          <group expand="0" string="Animal info">
+            <filter name="owner" string="Dueño" domain="[('owner', '=' , 'self')]"
+              context="{'group_by':'owner'}" />
+            <filter name="breed" string="Raza" domain="[('breed','=','self')]"
+              context="{'group_by':'breed'}" />
+            <filter name="species" string="Especie" domain="[('species', '=' , 'self')]"
+              context="{'group_by':'species'}" />
+            <filter name="size" string="Tamaño" domain="[('size', '=' , 'self')]"
+              context="{'group_by':'size'}" />
+            <filter name="sex" string="Sexo" domain="[('sex', '=' , 'self')]"
+              context="{'group_by':'sex'}" />
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <record id="vet_tree_view" model="ir.ui.view">
+      <field name="model">animal</field>
+      <field name="name">animal.tree.view</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="identification" />
+          <field name="microchip_number" string="N° de microchip"/>
+          <field name="name" />
+          <field name="owner" />
+          <field name="breed" />
+          <field name="species" />
+          <field name="sex" />
+          <field name="age" string="Edad"/>
+          <field name="reproductive_status" string="Esterilizado/Entero"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="vet_form_view" model="ir.ui.view">
+      <field name="model">animal</field>
+      <field name="name">animal.form.view</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <button name="action_create_quote" type="object" string="Crear Presupuesto"
+              class="btn-primary"
+            />
+          </header>
+          <sheet>
+            <div class="oe_button_box" name="button_box">
+              <button name="action_view_quotes" type="object" class="oe_stat_button"
+                icon="fa-dollar">
+                <field name="quote_count" widget="statinfo" string="Quotes" />
+              </button>
+              <button name="action_view_invoices" type="object" class="oe_stat_button"
+                icon="fa-money">
+                <field name="invoice_count" widget="statinfo" string="Invoices" />
+              </button>
+              <button name="action_view_visits" type="object" class="oe_stat_button"
+                icon="fa-building">
+                <field name="visit_count" widget="statinfo" string="Visitas" />
+              </button>
+            </div>
+            <div class="d-flex justify-content-between">
+              <div>
+                <label for="name" string="Nombre" />
+                <div>
+                  <field name="name" class="fs-1 mb-4" />
+                </div>
+              </div>
+              <field name="photo" widget="image" class="oe_avatar" />
+            </div>
+            <group>
+              <group>
+                <field name="identification" />
+              </group>
+              <group>
+                <field name="microchip_number" string="N° de microchip"/>
+              </group>
+              <group>
+                <field name="owner" />
+              </group>
+              <group>
+                <field name="species" />
+              </group>
+              <group>
+                <field name="breed" />
+              </group>
+            </group>
+            <notebook>
+              <page string="Visitas">
+                <field name="visit_ids">
+                  <tree>
+                    <field name="sequence" />
+                    <field name="date" />
+                    <field name="reason" />
+                    <field name="suggested_treatment" />
+                    <field name="observations" />
+                  </tree>
+
+                  <form>
+                    <group>
+                      <field name="date" />
+                      <field name="reason" />
+                      <field name="suggested_treatment" />
+                      <field name="observations" />
+                    </group>
+                  </form>
+                </field>
+              </page>
+
+              <page string="Medicamentos">
+                <field name="medicines" />
+              </page>
+
+              <page string="Vacunas">
+                <field name="vaccines" />
+              </page>
+
+              <page string="Alergias">
+                <field name="allergies" />
+              </page>
+
+              <page string="Cirugías">
+                <field name="surgeries" />
+              </page>
+
+              <page string="Otras informaciones">
+                <group>
+                  <group>
+                    <field name="sex" />
+                  </group>
+                  <group>
+                    <field name="size" />
+                  </group>
+                  <div class="d-flex">
+                    <group>
+                      <field name="weight" string="Peso" />
+                    </group>
+                    <span>Kg.</span>
+                  </div>
+                  <group>
+                    <field name="birthdate" />
+                  </group>
+                  <group>
+                    <field name="age" string="Edad"/>
+                  </group>
+                  <group>
+                    <field name="reproductive_status" string="Esterilizado/Entero"/>
+                  </group>
+                </group>
+                <group>
+                  <div class="d-flex">
+                    <group>
+                      <field name="height" string="Altura" />
+                    </group>
+                    <span>Mts.</span>
+                  </div>
+
+                  <group>
+                    <field name="tags" string="Color" widget="many2many_tags" options="{'color_field': 'color'}" />
+                  </group>
+                  <group>
+                    <field name="active" />
+                  </group>
+                </group>
+                <div>
+                  <label for="internal_notes" string="Notas" />
+                  <div>
+                    <field name="internal_notes" />
+                  </div>
+                </div>
+              </page>
+            </notebook>
+          </sheet>
+          <div class="oe_chatter">
+            <field widget="mail_thread" name="message_ids" />
+            <field widget="mail_activity" name="activity_ids" />
+          </div>
+        </form>
+      </field>
+    </record>
+
+    <record id="vet_kanban_view" model="ir.ui.view">
+      <field name="name">animal.kanban.view</field>
+      <field name="model">animal</field>
+      <field name="arch" type="xml">
+        <kanban class="o_kanban_mobile" sample="1">
+          <templates>
+            <t t-name="kanban-box">
+              <div t-attf-class="oe_kanban_global_click">
+                <div class="row">
+                  <div class="col-12">
+                    <strong>
+                      <div>
+                        <field name="name" /> (<field name="species" />) </div>
+                    </strong>
+                    <div> Dueño: <field name="owner" /></div>
+                  </div>
+                </div>
+                <div>
+                  <hr class="my-2" />
+                    <strong>ID</strong>: <field name="identification" />
+                </div>
+                <div class="d-flex justify-content-between">
+                  <field name="sex" />
+                  <field name="activity_ids" widget="kanban_activity" />
+                </div>
+              </div>
+            </t>
+          </templates>
+        </kanban>
+      </field>
+    </record>
+
+    <record id="animals_action" model="ir.actions.act_window">
+      <field name="name">Animales</field>
+      <field name="res_model">animal</field>
+      <field name="view_mode">search,tree,form,kanban</field>
+    </record>
+
+  </data>
+</odoo>
+
+=== ./views/animal_partner_views.xml ===
+<odoo>
+    <data>
+        <record id="animal_partner" model="ir.ui.view">
+            <field name="name">partner.pet.form.view</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form" />
+            <field name="arch" type="xml">
+                <xpath expr="//page[@name='internal_notes']" position="after">
+                    <page string="Animales">
+                        <field name="pet">
+                            <tree>
+                                <field name="name" />
+                                <field name="species" />
+                                <field name="breed" />
+                                <field name="sex" />
+                            </tree>
+                            <form>
+                                <sheet>
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <label for="name" string="Nombre" />
+                                            <div>
+                                                <field name="name" class="fs-1 mb-4" />
+                                            </div>
+                                        </div>
+                                        <field name="photo" widget="image" class="oe_avatar" />
+                                    </div>
+                                    <group>
+                                        <group>
+                                            <field name="identification" />
+                                        </group>
+                                        <group>
+                                            <field name="owner" />
+                                        </group>
+                                        <group>
+                                            <field name="species" />
+                                        </group>
+                                        <group>
+                                            <field name="breed" />
+                                        </group>
+                                        <group>
+                                            <field name="sex" />
+                                        </group>
+                                        <group>
+                                            <field name="size" />
+                                        </group>
+                                    </group>
+                                </sheet>
+                            </form>
+                        </field>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/animals_menus.xml ===
+<odoo>
+    <data>
+        <menuitem id="menu_animals" name="Vet" sequence="5"/>
+
+        <menuitem id="menu_animals_list" name="Animales" parent="menu_animals"
+            action="animals_action" sequence="1" />
+
+        <menuitem id="menu_visits_list" name="Visitas" parent="menu_animals"
+            action="visit_action" sequence="2" />
+
+        <menuitem id="menu_medical_management" name="Gestión Médica" parent="menu_animals"
+            action="animals_action" sequence="3" />
+
+        <menuitem id="menu_medicines_list" name="Medicamentos" parent="menu_medical_management"
+            action="medicine_action" />
+
+        <menuitem id="menu_vaccines_list" name="Vacunas" parent="menu_medical_management"
+            action="vaccine_action" />
+
+        <menuitem id="menu_allergies_list" name="Alergias" parent="menu_medical_management"
+            action="allergy_action" />
+
+        <menuitem id="menu_surgeries_list" name="Cirugías" parent="menu_medical_management"
+            action="surgery_action" />
+
+
+        <menuitem id="menu_insurances_list" name="Seguros" parent="menu_medical_management"
+            action="insurance_action" />
+
+        <menuitem id="menu_configuration" name="Configuration" parent="menu_animals"
+            action="animals_action" sequence="4" />
+
+        <menuitem id="menu_species_list" name="Especies" parent="menu_configuration"
+            action="specie_action" sequence="1" />
+
+        <menuitem id="menu_breeds_list" name="Razas" parent="menu_configuration"
+            action="breed_action" sequence="2" />
+
+        <menuitem id="menu_tags_list" name="Etiquetas" parent="menu_configuration"
+            action="tag_action" sequence="3" />
+
+    </data>
+</odoo>
+
+
+=== ./views/visit_sequence.xml ===
+<odoo>
+    <data noupdate="1">
+        <!-- Secuencia para el modelo animal.visit -->
+        <record id="seq_animal_visit" model="ir.sequence">
+            <field name="name">Animal Visita</field>
+            <field name="code">animal.visit.sequence</field>
+            <field name="prefix">VISIT/</field>
+            <field name="padding">4</field>
+            <field name="number_increment">1</field>
+        </record>
+    </data>
+</odoo>
+    
+
+=== ./controllers/__init__.py ===
+# -*- coding: utf-8 -*-
+
+from . import controllers
+
+
+=== ./controllers/controllers.py ===
+# -*- coding: utf-8 -*-
+# from odoo import http
+
+
+# class Vet(http.Controller):
+#     @http.route('/vet/vet', auth='public')
+#     def index(self, **kw):
+#         return "Hello, world"
+
+#     @http.route('/vet/vet/objects', auth='public')
+#     def list(self, **kw):
+#         return http.request.render('vet.listing', {
+#             'root': '/vet/vet',
+#             'objects': http.request.env['vet.vet'].search([]),
+#         })
+
+#     @http.route('/vet/vet/objects/<model("vet.vet"):obj>', auth='public')
+#     def object(self, obj, **kw):
+#         return http.request.render('vet.object', {
+#             'object': obj
+#         })
+
+
+
+=== ./__manifest__.py ===
+# -*- coding: utf-8 -*-
+{
+    'name': "Veterinary management",
+
+    'summary': "Manage the animals that visit our veterinarian",
+
+    'description': """
+Manage the animals that visit our veterinarian
+    """,
+
+    'author': "Javier Diez",
+    'website': "https://javierdiez.netlify.app/",
+    'license': 'AGPL-3',
+    # Categories can be used to filter modules in modules listing
+    # Check https://github.com/odoo/odoo/blob/15.0/odoo/addons/base/data/ir_module_category_data.xml
+    # for the full list
+    'category': 'Animales',
+    'version': '1.0',
+
+    # any module necessary for this one to work correctly
+    'depends': ['base','mail'],
+
+    # always loaded
+    'data': [
+        'security/ir.model.access.csv',
+        'views/animals_views.xml',
+        'views/medicines_views.xml',
+        'views/allergies_views.xml',
+        'views/surgeries_views.xml',
+        'views/vaccines_views.xml',
+        'views/insurances_views.xml',
+        'views/visits_views.xml',
+        'views/species_views.xml',
+        'views/breeds_views.xml',
+        'views/tags_views.xml',
+        'views/animal_partner_views.xml',
+        'views/animals_menus.xml',
+        'views/visit_sequence.xml',
+        'views/animals_identification.xml',
+    ],
+    # only loaded in demonstration mode
+    'demo': [
+        'demo/demo.xml',
+    ],
+    "images": ['static/images/banner.png', 'static/description/icon.png'],
+    'installable': True,
+    'application': True,  # Esto indica que tu módulo es una aplicación.
+    'auto_install': False,
+}
+
+
+
+=== ./security/ir.model.access.csv ===
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_animal,animal,model_animal,base.group_user,1,1,1,1
+access_animal_allergy,animal.allergy,model_animal_allergy,base.group_user,1,1,1,1
+access_animal_disease,animal.disease,model_animal_disease,base.group_user,1,1,1,1
+access_animal_insurance,animal.insurance,model_animal_insurance,base.group_user,1,1,1,1
+access_animal_medicine,animal.medicine,model_animal_medicine,base.group_user,1,1,1,1
+access_animal_specie,animal.specie,model_animal_specie,base.group_user,1,1,1,1
+access_animal_tag,animal.tag,model_animal_tag,base.group_user,1,1,1,1
+access_animal_surgery,animal.surgery,model_animal_surgery,base.group_user,1,1,1,1
+access_animal_vaccine,animal.vaccine,model_animal_vaccine,base.group_user,1,1,1,1
+access_animal_visit,animal.visit,model_animal_visit,base.group_user,1,1,1,1
+access_animal_breed,animal.breed,model_animal_breed,base.group_user,1,1,1,1
+
+
+
+
+
+
+=== ./models/diseases.py ===
+from odoo import models, fields, api
+
+class Disease(models.Model):
+    _name = "animal.disease"
+    _description = "Animal diseases table"
+
+    name = fields.Char(string="Surgerie", required=True)
+    observations = fields.Text(string="Observations")
+
+
+=== ./models/partner_pet.py ===
+from odoo import fields, models, api
+from odoo.exceptions import UserError
+
+class Pet(models.Model):
+    _inherit = "res.partner"
+
+    pet = fields.One2many("animal", "owner", string="Pet")
+
+
+=== ./models/allergies.py ===
+from odoo import models, fields, api
+
+class Allergy(models.Model):
+    _name = "animal.allergy"
+    _description = "Animal allergies table"
+
+    name = fields.Char(string="Alergia", required=True)
+    description = fields.Text(string="Descripción")
+
+
+=== ./models/visits.py ===
+from odoo import fields, models, api
+
+class Visit(models.Model):
+    _name = "animal.visit"
+    _description = "Animals visits table"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = "date desc"
+
+    animal_id = fields.Many2one('animal', string='Animal', required=True)  # Campo de relación Many2one con animal
+    date = fields.Datetime(string="Fecha", required=True)
+    name = fields.Char(related="animal_id.name", string="Animal", required=True, readonly=False)
+    owner = fields.Many2one(related="animal_id.owner", string="Dueño", readonly=True, store=True)
+    sex = fields.Selection(related="animal_id.sex", string="Sexo", readonly=True, store=True)
+    breed = fields.Many2one(related="animal_id.breed", string="Raza", readonly=True, store=True)
+    specie = fields.Many2one(related="animal_id.species", string="Especie", readonly=True, store=True)
+
+    # ---- CAMPO(S) HISTÓRICOS (se mantienen por compatibilidad) ----
+    reason = fields.Text(string="Razón")
+    suggested_treatment = fields.Text(string="Tratamiento sugerido")
+    observations = fields.Text(string="Observaciones")
+
+    # ---- NUEVOS CAMPOS SOLICITADOS ----
+    consultation_reason = fields.Text(string="Motivo de consulta")
+    anamnesis = fields.Text(string="Anamnesis Remota y Actual")
+    clinical_exam = fields.Text(string="Examen Clínico")
+    prediagnoses = fields.Text(string="Prediagnósticos")
+    treatment = fields.Text(string="Tratamiento")
+    rp = fields.Text(string="Rp")
+    follow_up = fields.Text(string="Control")
+
+    sequence = fields.Char(
+        string="Referencia",
+        required=True,
+        copy=False,
+        readonly=True,
+        index=True,
+        default=lambda self: 'Nuevo'
+    )
+
+    @api.model
+    def create(self, vals):
+        if vals.get('sequence', 'Nuevo') == 'Nuevo':
+            vals['sequence'] = self.env['ir.sequence'].next_by_code('animal.visit.sequence') or 'Nuevo'
+        return super(Visit, self).create(vals)
+
+=== ./models/vaccines.py ===
+from odoo import models, fields, api
+
+class Vaccine(models.Model):
+    _name = "animal.vaccine"
+    _description = "Animal vaccines table"
+
+    name = fields.Char(string="Vacuna", required=True)
+    description = fields.Text(string="Descripción")
+
+
+=== ./models/breeds.py ===
+from odoo import models, fields, api
+
+class Breed(models.Model):
+    _name = "animal.breed"
+    _description = "Animal breeds table"
+
+    name = fields.Char(string="Raza", required=True)
+    specie = fields.Many2one("animal.specie", string="Especie")
+    description = fields.Text(string="Descripción")
+
+
+=== ./models/__init__.py ===
+# -*- coding: utf-8 -*-
+
+from . import animals, allergies, diseases, insurances, medicines, species, surgeries, tag, vaccines, visits, breeds, partner_pet
+
+
+=== ./models/animals.py ===
+from odoo import models, fields, api
+from odoo.exceptions import UserError
+
+
+class Animal(models.Model):
+    _name = "animal"
+    _description = "Animals table"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = "identification desc"
+
+    name = fields.Char(string="Nombre", required=True)
+    sex = fields.Selection([
+        ('male', 'Masculino'),
+        ('female', 'Femenino')
+    ], string="Sexo", default="male")
+    birthdate = fields.Date(string="Fecha de Nacimiento")
+    # NUEVOS CAMPOS
+    age = fields.Integer(string="Edad")
+    reproductive_status = fields.Selection([
+        ('neutered', 'Esterilizado'),
+        ('entire', 'Entero'),
+    ], string="Esterilizado/Entero")
+    microchip_number = fields.Char(string="N° de microchip")
+
+    photo = fields.Binary(string="Foto")
+    breed = fields.Many2one("animal.breed", string="Raza")
+    species = fields.Many2one("animal.specie", string="Especie", required=True)
+    owner = fields.Many2one('res.partner', string="Dueño", store=True)
+    weight = fields.Float(string="Peso")
+    height = fields.Float(string="Altura")
+    size = fields.Selection([
+        ('small', 'Pequeño'),
+        ('medium', 'Mediano'),
+        ('large', 'Grande'),
+    ], string="Tamaño", default='small')
+    medicines = fields.Many2many("animal.medicine", string="Medicamentos", relation="animal_medicine_rel")
+    vaccines = fields.Many2many("animal.vaccine", string="Vacunas", relation="animal_vaccine_rel")
+    diseases = fields.Many2many("animal.disease", string="Enfermedades", relation="animal_disease_rel")
+    allergies = fields.Many2many("animal.allergy", string="Alergias", relation="animal_allergy_rel")
+    surgeries = fields.Many2many("animal.surgery", string="Cirugías", relation="animal_surgery_rel")
+    visit_ids = fields.One2many('animal.visit', 'animal_id', string='Visitas')
+    active = fields.Boolean(string="Activo", default=True)
+    tags = fields.Many2many("animal.tag", string="Etiquetas", relation="animal_tag_rel")
+    insurance = fields.Many2one("animal.insurance", string="Seguro", relation="animal_insurance_rel")
+    identification = fields.Char(string="ID", required=True, copy=False, readonly=True, index=True, default=lambda self: 'Nuevo')
+    internal_notes = fields.Text(string="Notas")
+    quote_count = fields.Integer(string="Presupuestos", compute="_compute_quote_count")
+    invoice_count = fields.Integer(string="Facturas", compute="_compute_invoice_count")
+    visit_count = fields.Integer(string="Visitas", compute="_compute_visit_count")
+
+    @api.model
+    def create(self, vals):
+        if vals.get('identification', 'Nuevo') == 'Nuevo':
+            vals['identification'] = self.env['ir.sequence'].next_by_code('animal.identification') or 'Nuevo'
+        return super(Animal, self).create(vals)
+
+    @api.depends('owner')
+    def _compute_quote_count(self):
+        for record in self:
+            if record.owner:
+                record.quote_count = self.env['sale.order'].search_count([('partner_id', '=', record.owner.id)])
+            else:
+                record.quote_count = 0
+
+    @api.depends('owner')
+    def _compute_invoice_count(self):
+        for record in self:
+            if record.owner:
+                record.invoice_count = self.env['account.move'].search_count([('partner_id', '=', record.owner.id)])
+            else:
+                record.invoice_count = 0
+
+    @api.depends('owner')
+    def _compute_visit_count(self):
+        for record in self:
+            if record.id:
+                record.visit_count = self.env['animal.visit'].search_count([('animal_id', '=', record.id)])
+            else:
+                record.visit_count = 0
+
+    def action_view_quotes(self):
+        # Obtener el ID del partner asociado
+        partner_id = self.owner.id
+
+        return {
+            'name': 'Presupuestos',
+            'type': 'ir.actions.act_window',
+            'view_mode': 'tree,form',
+            'res_model': 'sale.order',
+            'domain': [('partner_id', '=', partner_id)],
+            'context': dict(self._context),
+        }
+
+    def action_view_invoices(self):
+        # Obtener el ID del partner asociado
+        partner_id = self.owner.id
+
+        return {
+            'name': 'Facturas',
+            'type': 'ir.actions.act_window',
+            'view_mode': 'tree,form',
+            'res_model': 'account.move',
+            'domain': [('partner_id', '=', partner_id)],
+            'context': dict(self._context),
+        }
+
+    def action_view_visits(self):
+        # Obtener el ID del partner asociado
+        animal = self.id
+
+        return {
+            'name': 'Visitas',
+            'type': 'ir.actions.act_window',
+            'view_mode': 'tree,form',
+            'res_model': 'animal.visit',
+            'domain': [('animal_id', '=', animal)],
+            'context': dict(self._context),
+        }
+
+    def action_create_quote(self):
+        # Asegurarse de que el animal tiene un dueño
+        if not self.owner:
+            raise UserError('This animal does not have an owner defined.')
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Nuevo Presupuesto',
+            'res_model': 'sale.order',
+            'view_mode': 'form',
+            'target': 'current',
+            'context': {
+                'default_partner_id': self.owner.id,  # Prellenar el cliente con el dueño del animal
+            },
+        }
+
+=== ./models/species.py ===
+from odoo import models, fields, api 
+
+
+class Specie(models.Model):
+    _name = "animal.specie"
+    _description = "Animals species table"
+
+    name = fields.Char(string="Especie")
+    characteristics = fields.Text(string="Características")
+
+
+=== ./models/surgeries.py ===
+from odoo import models, fields, api
+
+class Surgery(models.Model):
+    _name = "animal.surgery"
+    _description = "Animal surgeries table"
+
+    name = fields.Char(string="Cirugía", required=True)
+    observations = fields.Text(string="Observaciones")
+
+
+=== ./models/insurances.py ===
+from odoo import models, fields, api
+
+class Insurance(models.Model):
+    _name = "animal.insurance"
+    _description = "Animals insurances table"
+
+    name = fields.Char(string="Seguro", required=True)
+    characteristics = fields.Text(string="Características")
+    cost = fields.Integer(string="Costo")
+
+
+=== ./models/tag.py ===
+from odoo import models, fields, api
+
+class Tag(models.Model):
+    _name = "animal.tag"
+    _description = "Animal tags table"
+
+    name = fields.Char(string="Etiqueta", required=True)
+    description = fields.Text(string="Descripción")
+    color = fields.Integer(string="Color")
+
+
+=== ./models/medicines.py ===
+from odoo import models, fields, api
+
+class Medicine(models.Model):
+    _name = "animal.medicine"
+    _description = "Animal medicines table"
+
+    name = fields.Char(string="Medicamento",required=True)
+    description = fields.Text(string="Descripción")

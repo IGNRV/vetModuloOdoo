@@ -9,9 +9,16 @@
                     <field name="name" />
                     <field name="owner" />
                     <field name="sequence" />
-                    <field name="reason" />
-                    <field name="suggested_treatment" />
-                    <field name="observations" />
+
+                    <!-- Reemplazamos campos antiguos por los nuevos en búsqueda -->
+                    <field name="consultation_reason" string="Motivo de consulta" />
+                    <field name="anamnesis" string="Anamnesis Remota y Actual" />
+                    <field name="clinical_exam" string="Examen Clínico" />
+                    <field name="prediagnoses" string="Prediagnósticos" />
+                    <field name="treatment" string="Tratamiento" />
+                    <field name="rp" string="Rp" />
+                    <field name="follow_up" string="Control" />
+
                     <group expand="0" string="Visit info">
                         <filter name="animal_id" string="Animal" domain="[('animal_id','=','self')]"
                             context="{'group_by':'animal_id'}" />
@@ -39,7 +46,9 @@
                     <field name="sequence" />
                     <field name="animal_id" />
                     <field name="owner" />
-                    <field name="reason" />
+                    <!-- Mostrar un resumen con los nuevos campos más relevantes -->
+                    <field name="consultation_reason" string="Motivo de consulta" />
+                    <field name="treatment" string="Tratamiento" />
                     <field name="date" />
                 </tree>
             </field>
@@ -51,27 +60,55 @@
             <field name="arch" type="xml">
                 <form>
                     <sheet>
+                        <!-- Referencia arriba como título -->
                         <group>
                             <field class="fs-1" name="sequence" />
-                            <group>
-                                <field name="animal_id" />
-                            </group>
-                            <group>
-                                <field name="owner" />
-                            </group>
-                            <group>
-                                <field name="reason" />
-                            </group>
-                            <group>
-                                <field name="date" />
-                            </group>
-                            <group>
-                                <field name="suggested_treatment" />
-                            </group>
-                            <group>
-                                <field name="observations" />
-                            </group>
                         </group>
+
+                        <!-- ===== DISTRIBUCIÓN EN DOS COLUMNAS (IZQ más ancha) ===== -->
+                        <!--
+                             Primer group: left (colspan=2) = FICHA CLÍNICA (dos subcolumnas)
+                             Segundo group: right = Datos administrativos (Animal, Dueño, Fecha)
+                        -->
+                        <group>
+                                                    <!-- Columna DERECHA (más estrecha) -->
+                            <group string="Datos de la Visita">
+                                <group>
+                                    <field name="animal_id" />
+                                </group>
+                                <group>
+                                    <field name="owner" />
+                                </group>
+                                <group>
+                                    <field name="date" />
+                                </group>
+                            </group>
+                            <!-- Columna IZQUIERDA (más ancha) -->
+                            <group string="Ficha Clínica" colspan="2">
+                                <!-- Dos columnas internas dentro de Ficha Clínica -->
+                                <group>
+                                    <field name="consultation_reason" placeholder="Describa el motivo de la consulta..." />
+                                    <field name="clinical_exam" placeholder="Hallazgos del examen clínico..." />
+                                    <field name="treatment" placeholder="Tratamiento indicado..." />
+                                    <field name="follow_up" placeholder="Fecha/Indicaciones de control..." />
+                                </group>
+                                <group>
+                                    <field name="anamnesis" placeholder="Antecedentes remotos y actuales relevantes..." />
+                                    <field name="prediagnoses" placeholder="Listado de diagnósticos presuntivos..." />
+                                    <field name="rp" placeholder="Receta / prescripción (Rp)..." />
+                                </group>
+                            </group>
+
+
+                        </group>
+
+                        <!-- Campos antiguos mantenidos (opcional, puedes ocultarlos si ya no se usan)
+                        <group string="(Histórico)">
+                            <field name="reason" />
+                            <field name="suggested_treatment" />
+                            <field name="observations" />
+                        </group>
+                        -->
                     </sheet>
                     <div class="oe_chatter">
                         <field widget="mail_thread" name="message_ids" />
@@ -94,21 +131,19 @@
                                         <strong>
                                             <field name="sequence" />
                                         </strong>
-                                        <div><strong> Animal</strong>: <field name="animal_id" />
-                                        </div>
-
+                                        <div><strong> Animal</strong>: <field name="animal_id" /></div>
                                     </div>
                                 </div>
-                                <hr
-                                    class="my-2" />
+                                <hr class="my-2"/>
+                                <div class="mb-2">
+                                    <strong>Motivo:</strong>
+                                    <span><field name="consultation_reason"/></span>
+                                </div>
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <strong>Dueño</strong>: <field
-                                            name="owner" />
+                                        <strong>Dueño</strong>: <field name="owner" />
                                     </div>
-                                    <field
-                                        name="activity_ids"
-                                        widget="kanban_activity" />
+                                    <field name="activity_ids" widget="kanban_activity" />
                                 </div>
                             </div>
                         </t>
