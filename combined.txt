@@ -127,14 +127,10 @@ from . import models
                                 <group>
                                     <field name="owner" />
                                 </group>
-                                <!-- Fecha y Dr/Dra en la MISMA FILA: Dr/Dra a la derecha de Fecha -->
-                                <group>
-                                    <group>
-                                        <field name="date" />
-                                    </group>
-                                    <group>
-                                        <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional" />
-                                    </group>
+                                <!-- Fecha y Dr/Dra en la MISMA FILA con Dr/Dra más ancho -->
+                                <group col="4">
+                                    <field name="date" colspan="1"/>
+                                    <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional" colspan="3"/>
                                 </group>
                             </group>
 

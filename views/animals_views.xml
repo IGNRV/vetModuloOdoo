@@ -90,6 +90,8 @@
               </div>
               <field name="photo" widget="image" class="oe_avatar" />
             </div>
+
+            <!-- ======= BLOQUE CON CAMPOS BÁSICOS ======= -->
             <group>
               <group>
                 <field name="identification" />
@@ -106,7 +108,28 @@
               <group>
                 <field name="breed" />
               </group>
+
+              <!-- NUEVOS INPUTS AL LADO DE "Raza" -->
+              <group>
+                <field name="birthdate" string="Fecha de nacimiento"/>
+              </group>
+              <group>
+                <field name="character" string="Caracter"/>
+              </group>
+              <group>
+                <field name="habitat" string="Habitat"/>
+              </group>
+              <group>
+                <field name="treating_doctor" string="Medico tratante"/>
+              </group>
+              <group>
+                <field name="hair_type" string="Tipo de pelo"/>
+              </group>
+              <group>
+                <field name="diet" string="Dieta"/>
+              </group>
             </group>
+
             <notebook>
               <page string="Visitas">
                 <field name="visit_ids">

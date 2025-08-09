@@ -48,6 +48,13 @@ class Animal(models.Model):
     invoice_count = fields.Integer(string="Facturas", compute="_compute_invoice_count")
     visit_count = fields.Integer(string="Visitas", compute="_compute_visit_count")
 
+    # ===== NUEVOS CAMPOS SOLICITADOS (se guardan en BD) =====
+    character = fields.Char(string="Carácter")
+    habitat = fields.Char(string="Hábitat")
+    treating_doctor = fields.Char(string="Médico tratante")
+    hair_type = fields.Char(string="Tipo de pelo")
+    diet = fields.Char(string="Dieta")
+
     @api.model
     def create(self, vals):
         if vals.get('identification', 'Nuevo') == 'Nuevo':
