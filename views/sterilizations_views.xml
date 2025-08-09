@@ -47,6 +47,14 @@
       <field name="model">animal.sterilization</field>
       <field name="arch" type="xml">
         <form string="Esterilización">
+          <header>
+            <!-- Botón para imprimir PDF -->
+            <button name="%(action_report_sterilization)d"
+                    type="action"
+                    class="btn-primary"
+                    string="Imprimir Ficha"/>
+          </header>
+
           <sheet>
 
             <!-- Enlaces opcionales a registros -->

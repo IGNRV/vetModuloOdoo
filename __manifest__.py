@@ -37,8 +37,11 @@ Manage the animals that visit our veterinarian
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
 
+        # Reportes
+        'report/sterilization_report.xml',   # <-- NUEVO: acción + plantilla PDF
+
         # IMPORTANTE: Definir la acción de Esterilizaciones ANTES del menú que la usa
-        'views/sterilizations_views.xml',   # <-- MOVIDO ARRIBA
+        'views/sterilizations_views.xml',
 
         # Menús (usa acciones ya definidas arriba)
         'views/animals_menus.xml',

@@ -10,6 +10,289 @@ from . import controllers
 from . import models
 
 
+=== ./report/sterilization_report.xml ===
+<odoo>
+  <data>
+
+    <!-- Acción de reporte PDF -->
+    <record id="action_report_sterilization" model="ir.actions.report">
+      <field name="name">Ficha de Esterilización</field>
+      <field name="model">animal.sterilization</field>
+      <field name="report_type">qweb-pdf</field>
+      <field name="report_name">vet.report_sterilization</field>
+      <field name="report_file">vet.report_sterilization</field>
+      <!-- Nombre dinámico del archivo -->
+      <field name="print_report_name">
+        (object.patient_name or 'Esterilizacion') + ' - Ficha.pdf'
+      </field>
+    </record>
+
+    <!-- Contenedor por registro -->
+    <template id="report_sterilization">
+      <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="doc">
+          <t t-call="vet.report_sterilization_document"/>
+          <div class="pagebreak"/>
+        </t>
+      </t>
+    </template>
+
+    <!-- Documento -->
+    <template id="report_sterilization_document">
+      <t t-set="o" t-value="doc"/>
+      <t t-call="web.external_layout">
+        <div class="oe_structure"/>
+        <style type="text/css">
+          .stz * { font-size: 11px; }
+          .stz .title { font-size: 18px; font-weight: 700; }
+          .stz .subtitle { font-size: 12px; }
+          .stz table { width: 100%; border-collapse: collapse; }
+          .stz th, .stz td { border: 1px solid #555; padding: 4px 6px; vertical-align: middle; }
+          .stz .noborder td, .stz .noborder th { border: 0; }
+          .stz .section { background: #eee; font-weight: 700; }
+          .stz .checkbox { display:inline-block; border:1px solid #555; width:12px; height:12px; margin-right:4px; text-align:center; line-height:12px; }
+          .stz .center { text-align: center; }
+          .stz .right { text-align: right; }
+          .stz .small { font-size: 10px; }
+          .stz .microchip-box { border:1px solid #555; height:40px; }
+          .stz .pagebreak { page-break-after: always; }
+          .stz .sig { height:60px; }
+          .stz .muted { color:#666; }
+        </style>
+
+        <div class="stz">
+
+          <!-- Cabecera / título -->
+          <table class="noborder">
+            <tr>
+              <td class="noborder" style="width:65%">
+                <div class="title">Esterilización</div>
+                <div class="subtitle">Ficha de Identificación, Consentimiento y Declaración simple</div>
+              </td>
+              <td class="noborder" style="width:35%">
+                <table>
+                  <tr>
+                    <th class="center">Etiqueta del Microchip</th>
+                  </tr>
+                  <tr>
+                    <td class="microchip-box center small">
+                      <t t-esc="o.animal_id and (o.animal_id.microchip_number or '')"/>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Datos responsable -->
+          <table>
+            <tr><th colspan="8" class="section">Datos responsable</th></tr>
+            <tr>
+              <td style="width:12%">Fecha:</td>
+              <td style="width:13%"><span t-field="o.date"/></td>
+              <td style="width:8%">RUT:</td>
+              <td style="width:17%"><span t-esc="o.resp_rut or ''"/></td>
+              <td style="width:16%">Fecha de nacimiento:</td>
+              <td style="width:14%"><span t-field="o.resp_birthdate"/></td>
+              <td style="width:8%">Teléfono 1:</td>
+              <td style="width:12%"><span t-esc="o.resp_phone1 or ''"/></td>
+            </tr>
+            <tr>
+              <td>Nombre:</td>
+              <td colspan="3"><span t-esc="o.resp_name or ''"/></td>
+              <td>Teléfono 2:</td>
+              <td><span t-esc="o.resp_phone2 or ''"/></td>
+              <td>Mail:</td>
+              <td><span t-esc="o.resp_email or ''"/></td>
+            </tr>
+            <tr>
+              <td>Dirección:</td>
+              <td colspan="5"><span t-esc="o.resp_address or ''"/></td>
+              <td>Comuna:</td>
+              <td><span t-esc="o.resp_commune or ''"/></td>
+            </tr>
+            <tr>
+              <td>Región:</td>
+              <td colspan="3"><span t-esc="o.resp_region or ''"/></td>
+              <td class="center" colspan="2">¿Es dueño/a de la mascota?</td>
+              <td colspan="2">
+                <span class="checkbox" t-esc=" '✔' if o.resp_is_owner else '' "/> Sí
+                &#160;&#160;&#160;
+                <span class="checkbox" t-esc=" '✔' if not o.resp_is_owner else '' "/> No
+              </td>
+            </tr>
+          </table>
+
+          <!-- Datos Paciente -->
+          <table>
+            <tr><th colspan="12" class="section">Datos Paciente</th></tr>
+            <tr>
+              <td style="width:10%">Nombre</td>
+              <td style="width:16%"><span t-esc="o.patient_name or (o.animal_id and o.animal_id.name) or ''"/></td>
+              <td style="width:10%">Especie</td>
+              <td style="width:12%"><span t-esc="dict(o._fields['specie'].selection).get(o.specie) if o.specie else ''"/></td>
+              <td style="width:8%">Sexo</td>
+              <td style="width:10%"><span t-esc="dict(o._fields['sex'].selection).get(o.sex) if o.sex else ''"/></td>
+              <td style="width:8%">Raza</td>
+              <td style="width:10%"><span t-esc="o.breed_text or ''"/></td>
+              <td style="width:8%">Color</td>
+              <td style="width:8%"><span t-esc="o.color or ''"/></td>
+              <td style="width:4%">Patrón</td>
+              <td style="width:6%"><span t-esc="o.pattern or ''"/></td>
+            </tr>
+            <tr>
+              <td>Fecha Nacimiento</td>
+              <td><span t-field="o.patient_birthdate"/></td>
+              <td>Peso (Kg)</td>
+              <td><span t-esc="o.weight or ''"/></td>
+              <td>Tipo Tenencia</td>
+              <td><span t-esc="dict(o._fields['tenancy_type'].selection).get(o.tenancy_type) if o.tenancy_type else ''"/></td>
+              <td>Comuna Obtención</td>
+              <td><span t-esc="o.commune_obtention or ''"/></td>
+              <td>N° animales casa</td>
+              <td colspan="3"><span t-esc="o.animals_at_home or ''"/></td>
+            </tr>
+            <tr>
+              <td>Obtención</td>
+              <td colspan="3"><span t-esc="dict(o._fields['obtention'].selection).get(o.obtention) if o.obtention else ''"/></td>
+              <td>Razón tenencia</td>
+              <td colspan="5"><span t-esc="dict(o._fields['tenure_reason'].selection).get(o.tenure_reason) if o.tenure_reason else ''"/></td>
+              <td colspan="2"><span t-esc="o.tenure_reason_other if (o.tenure_reason == 'otro') else ''"/></td>
+            </tr>
+            <tr>
+              <td>¿Mascota ya esterilizada?</td>
+              <td colspan="2">
+                <span class="checkbox" t-esc=" '✔' if o.already_sterilized else '' "/> Sí
+                &#160;&#160;&#160;
+                <span class="checkbox" t-esc=" '✔' if (o.already_sterilized is False) else '' "/> No
+              </td>
+              <td class="center">¿Ha asistido antes al Médico Veterinario?</td>
+              <td colspan="3">
+                <span class="checkbox" t-esc=" '✔' if o.visited_vet_before == 'si' else '' "/> Sí
+                &#160;&#160;&#160;
+                <span class="checkbox" t-esc=" '✔' if o.visited_vet_before == 'no' else '' "/> No
+                &#160;&#160;&#160;
+                <span class="checkbox" t-esc=" '✔' if o.visited_vet_before == 'ns' else '' "/> N/S
+              </td>
+              <td class="center">¿Microchip implantado hoy?</td>
+              <td colspan="4">
+                <span class="checkbox" t-esc=" '✔' if o.microchip_today else '' "/> Sí
+                &#160;&#160;&#160;
+                <span class="checkbox" t-esc=" '✔' if (o.microchip_today is False) else '' "/> No
+              </td>
+            </tr>
+          </table>
+
+          <!-- Procedimiento -->
+          <table>
+            <tr><th colspan="8" class="section">Procedimiento</th></tr>
+            <tr>
+              <td style="width:14%">Procedimiento</td>
+              <td style="width:20%"><span t-esc="dict(o._fields['procedure_type'].selection).get(o.procedure_type) if o.procedure_type else ''"/></td>
+              <td style="width:18%">Abordaje (OVH)</td>
+              <td style="width:16%">
+                <span t-esc="dict(o._fields['ovario_approach'].selection).get(o.ovario_approach) if (o.procedure_type == 'ovariohisterectomia' and o.ovario_approach) else ''"/>
+              </td>
+              <td style="width:16%">Técnica (Orquiectomía)</td>
+              <td colspan="3">
+                <span t-esc="dict(o._fields['orchiectomy_type'].selection).get(o.orchiectomy_type) if (o.procedure_type == 'orquiectomia' and o.orchiectomy_type) else ''"/>
+              </td>
+            </tr>
+            <tr>
+              <td>Nombre M.veterinario/a</td>
+              <td><span t-esc="o.vet_name or ''"/></td>
+              <td>RUT</td>
+              <td><span t-esc="o.vet_rut or ''"/></td>
+              <td>Firma y timbre</td>
+              <td colspan="3" class="center sig">
+                <img t-if="o.signature" t-att-src="image_data_uri(o.signature)" style="max-height:60px;"/>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Resultado procedimientos -->
+          <table>
+            <tr><th colspan="8" class="section">Resultado procedimientos</th></tr>
+            <tr>
+              <td style="width:16%">Esterilización - Estado</td>
+              <td style="width:84%" colspan="7">
+                <span class="checkbox" t-esc=" '✔' if o.status == 'exito' else '' "/> finalizado con éxito
+                &#160;&#160;&#160;
+                <span class="checkbox" t-esc=" '✔' if o.status == 'suspendido' else '' "/> suspendido
+                &#160;&#160;&#160;
+                <span class="checkbox" t-esc=" '✔' if o.status == 'rechazado' else '' "/> rechazado
+                &#160;&#160;&#160;
+                <span class="checkbox" t-esc=" '✔' if o.status == 'fallecido' else '' "/> fallecido
+              </td>
+            </tr>
+            <tr>
+              <td>Causa defunción</td>
+              <td colspan="3"><span t-esc="o.death_cause if (o.status == 'fallecido') else ''"/></td>
+              <td>Momento de defunción</td>
+              <td colspan="2">
+                <span t-esc="dict(o._fields['death_moment'].selection).get(o.death_moment) if (o.status == 'fallecido' and o.death_moment) else ''"/>
+              </td>
+              <td>Fecha defunción</td>
+              <td><span t-field="o.death_date"/></td>
+            </tr>
+          </table>
+
+          <!-- Autorización -->
+          <table>
+            <tr><th class="section">Autorización</th></tr>
+            <tr>
+              <td class="small">
+                Mediante el presente documento autorizo a realizar el procedimiento de Esterilización al paciente individualizado en esta ficha,
+                el que es de mi propiedad o del cual me haré responsable para efectos de los cuidados.
+                &#160;&#160;&#160;&#160;[ ] Sí &#160;&#160;&#160; [ ] No
+              </td>
+            </tr>
+          </table>
+
+          <!-- Declaración / texto -->
+          <table>
+            <tr><th class="section">Esterilización</th></tr>
+            <tr>
+              <td class="small">
+                Declaro que me han explicado detalladamente el procedimiento quirúrgico al que será sometida mi mascota y manifiesto entender que se extraerán definitivamente los órganos reproductores de ésta.
+                Se me ha explicado además que, por su naturaleza, este procedimiento involucra riesgos generales y complicaciones que, a pesar de todas las medidas y cuidados efectuados por el equipo médico, pueden ser inevitables y no son imputables por las lesiones que llegasen a causar la muerte de mi mascota.
+                Asimismo declaro estar en conocimiento y consentir que, como todo procedimiento quirúrgico, requiere sedación y anestesia general, lo que puede conllevar complicaciones propias o asociadas, incluyendo efectos adversos.
+                Declaro que se me otorgó suficiente espacio de preguntas y se me brindó toda la información necesaria para la toma de decisiones.
+              </td>
+            </tr>
+          </table>
+
+          <!-- Observaciones -->
+          <table>
+            <tr><th class="section">Observaciones / Notas</th></tr>
+            <tr>
+              <td style="height:120px;">
+                <span t-esc="o.notes or ''"/>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Pie simple con firmas (paciente/propietario) -->
+          <table class="noborder" style="margin-top:30px;">
+            <tr class="noborder">
+              <td class="noborder center" style="width:50%">
+                _________________________________<br/>
+                Firma Responsable
+              </td>
+              <td class="noborder center" style="width:50%">
+                _________________________________<br/>
+                Timbre / Firma Clínica
+              </td>
+            </tr>
+          </table>
+
+        </div>
+      </t>
+    </template>
+
+  </data>
+</odoo>
+
 === ./demo/demo.xml ===
 <odoo>
     <data>
@@ -350,6 +633,14 @@ from . import models
       <field name="model">animal.sterilization</field>
       <field name="arch" type="xml">
         <form string="Esterilización">
+          <header>
+            <!-- Botón para imprimir PDF -->
+            <button name="%(action_report_sterilization)d"
+                    type="action"
+                    class="btn-primary"
+                    string="Imprimir Ficha"/>
+          </header>
+
           <sheet>
 
             <!-- Enlaces opcionales a registros -->
@@ -393,7 +684,8 @@ from . import models
               <field name="obtention" string="Obtención"/>
               <separator string="Razón tenencia" colspan="4"/>
               <field name="tenure_reason" colspan="2"/>
-              <field name="tenure_reason_other" attrs="{'invisible':[('tenure_reason','!=','otro')]}"/>
+              <!-- v17: usar invisible con expresión booleana -->
+              <field name="tenure_reason_other" invisible="tenure_reason != 'otro'"/>
               <separator string="Antecedentes" colspan="4"/>
               <field name="already_sterilized"/>
               <field name="visited_vet_before"/>
@@ -403,19 +695,21 @@ from . import models
             <!-- ===== Procedimiento ===== -->
             <group string="Procedimiento" col="4">
               <field name="procedure_type"/>
-              <field name="ovario_approach" attrs="{'invisible':[('procedure_type','!=','ovariohisterectomia')]}"/>
-              <field name="orchiectomy_type" attrs="{'invisible':[('procedure_type','!=','orquiectomia')]}"/>
+              <!-- v17: invisibilidad en expresión directa -->
+              <field name="ovario_approach" invisible="procedure_type != 'ovariohisterectomia'"/>
+              <field name="orchiectomy_type" invisible="procedure_type != 'orquiectomia'"/>
               <field name="vet_name" string="Nombre M.veterinario/a"/>
               <field name="vet_rut" string="RUT"/>
-              <field name="signature" filename="firma.png" widget="image" string="Firma y timbre" colspan="2"/>
+              <field name="signature" widget="image" string="Firma y timbre" colspan="2"/>
             </group>
 
             <!-- ===== Resultado procedimientos ===== -->
             <group string="Resultado procedimientos" col="4">
               <field name="status" string="Estado"/>
-              <field name="death_cause" attrs="{'invisible':[('status','!=','fallecido')]}"/>
-              <field name="death_moment" attrs="{'invisible':[('status','!=','fallecido')]}"/>
-              <field name="death_date" attrs="{'invisible':[('status','!=','fallecido')]}"/>
+              <!-- v17: invisibles cuando no es 'fallecido' -->
+              <field name="death_cause" invisible="status != 'fallecido'"/>
+              <field name="death_moment" invisible="status != 'fallecido'"/>
+              <field name="death_date" invisible="status != 'fallecido'"/>
               <field name="notes" colspan="4"/>
             </group>
 
@@ -940,8 +1234,11 @@ Manage the animals that visit our veterinarian
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
 
+        # Reportes
+        'report/sterilization_report.xml',   # <-- NUEVO: acción + plantilla PDF
+
         # IMPORTANTE: Definir la acción de Esterilizaciones ANTES del menú que la usa
-        'views/sterilizations_views.xml',   # <-- MOVIDO ARRIBA
+        'views/sterilizations_views.xml',
 
         # Menús (usa acciones ya definidas arriba)
         'views/animals_menus.xml',
