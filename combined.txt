@@ -300,6 +300,145 @@ from . import models
 </odoo>
 
 
+=== ./views/sterilizations_views.xml ===
+<odoo>
+  <data>
+
+    <!-- ====== Search ====== -->
+    <record id="sterilization_search_view" model="ir.ui.view">
+      <field name="name">animal.sterilization.search.view</field>
+      <field name="model">animal.sterilization</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="patient_name" string="Paciente"/>
+          <field name="specie" string="Especie"/>
+          <field name="sex" string="Sexo"/>
+          <field name="date" string="Fecha"/>
+          <field name="status" string="Estado"/>
+          <field name="vet_name" string="Médico/a"/>
+          <group expand="0" string="Agrupar por">
+            <filter name="grp_specie" string="Especie" context="{'group_by':'specie'}"/>
+            <filter name="grp_status" string="Estado" context="{'group_by':'status'}"/>
+            <filter name="grp_vet" string="Médico/a" context="{'group_by':'vet_name'}"/>
+            <filter name="grp_date" string="Fecha" context="{'group_by': 'date:month'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- ====== Tree ====== -->
+    <record id="sterilization_tree_view" model="ir.ui.view">
+      <field name="name">animal.sterilization.tree.view</field>
+      <field name="model">animal.sterilization</field>
+      <field name="arch" type="xml">
+        <tree string="Esterilizaciones">
+          <field name="date"/>
+          <field name="patient_name"/>
+          <field name="specie"/>
+          <field name="sex"/>
+          <field name="weight"/>
+          <field name="procedure_type"/>
+          <field name="status"/>
+          <field name="vet_name"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- ====== Form ====== -->
+    <record id="sterilization_form_view" model="ir.ui.view">
+      <field name="name">animal.sterilization.form.view</field>
+      <field name="model">animal.sterilization</field>
+      <field name="arch" type="xml">
+        <form string="Esterilización">
+          <sheet>
+
+            <!-- Enlaces opcionales a registros -->
+            <group>
+              <group>
+                <field name="animal_id"/>
+              </group>
+              <group>
+                <field name="owner_id" string="Responsable (contacto)"/>
+              </group>
+            </group>
+
+            <!-- ===== Datos responsable ===== -->
+            <group string="Datos responsable" col="4">
+              <field name="date"/>
+              <field name="resp_rut"/>
+              <field name="resp_birthdate" string="Fecha de nacimiento"/>
+              <field name="resp_name" string="Nombre"/>
+              <field name="resp_phone1" string="Teléfono 1"/>
+              <field name="resp_phone2" string="Teléfono 2"/>
+              <field name="resp_address" string="Dirección" colspan="2"/>
+              <field name="resp_commune" string="Comuna"/>
+              <field name="resp_region" string="Región"/>
+              <field name="resp_email" string="Mail" colspan="2"/>
+              <field name="resp_is_owner" widget="boolean_toggle" string="¿Es dueño/a de la mascota?"/>
+            </group>
+
+            <!-- ===== Datos Paciente ===== -->
+            <group string="Datos Paciente" col="4">
+              <field name="patient_name" string="Nombre"/>
+              <field name="specie"/>
+              <field name="breed_text" string="Raza"/>
+              <field name="patient_birthdate" string="Fecha de Nacimiento"/>
+              <field name="sex"/>
+              <field name="color"/>
+              <field name="weight" string="Peso (Kg)"/>
+              <field name="pattern" string="Patrón"/>
+              <field name="tenancy_type" string="Tipo Tenencia"/>
+              <field name="commune_obtention" string="Comuna Obtención"/>
+              <field name="animals_at_home" string="N° total animales en casa"/>
+              <field name="obtention" string="Obtención"/>
+              <separator string="Razón tenencia" colspan="4"/>
+              <field name="tenure_reason" colspan="2"/>
+              <field name="tenure_reason_other" attrs="{'invisible':[('tenure_reason','!=','otro')]}"/>
+              <separator string="Antecedentes" colspan="4"/>
+              <field name="already_sterilized"/>
+              <field name="visited_vet_before"/>
+              <field name="microchip_today"/>
+            </group>
+
+            <!-- ===== Procedimiento ===== -->
+            <group string="Procedimiento" col="4">
+              <field name="procedure_type"/>
+              <field name="ovario_approach" attrs="{'invisible':[('procedure_type','!=','ovariohisterectomia')]}"/>
+              <field name="orchiectomy_type" attrs="{'invisible':[('procedure_type','!=','orquiectomia')]}"/>
+              <field name="vet_name" string="Nombre M.veterinario/a"/>
+              <field name="vet_rut" string="RUT"/>
+              <field name="signature" filename="firma.png" widget="image" string="Firma y timbre" colspan="2"/>
+            </group>
+
+            <!-- ===== Resultado procedimientos ===== -->
+            <group string="Resultado procedimientos" col="4">
+              <field name="status" string="Estado"/>
+              <field name="death_cause" attrs="{'invisible':[('status','!=','fallecido')]}"/>
+              <field name="death_moment" attrs="{'invisible':[('status','!=','fallecido')]}"/>
+              <field name="death_date" attrs="{'invisible':[('status','!=','fallecido')]}"/>
+              <field name="notes" colspan="4"/>
+            </group>
+
+          </sheet>
+
+          <div class="oe_chatter">
+            <field widget="mail_thread" name="message_ids"/>
+            <field widget="mail_activity" name="activity_ids"/>
+          </div>
+        </form>
+      </field>
+    </record>
+
+    <!-- ====== Action ====== -->
+    <record id="sterilization_action" model="ir.actions.act_window">
+      <field name="name">Esterilizaciones</field>
+      <field name="res_model">animal.sterilization</field>
+      <field name="view_mode">search,tree,form,kanban</field>
+    </record>
+
+  </data>
+</odoo>
+
 === ./views/species_views.xml ===
 <odoo>
     <data>
@@ -432,6 +571,8 @@ from . import models
               </div>
               <field name="photo" widget="image" class="oe_avatar" />
             </div>
+
+            <!-- ======= BLOQUE CON CAMPOS BÁSICOS ======= -->
             <group>
               <group>
                 <field name="identification" />
@@ -448,7 +589,28 @@ from . import models
               <group>
                 <field name="breed" />
               </group>
+
+              <!-- NUEVOS INPUTS AL LADO DE "Raza" -->
+              <group>
+                <field name="birthdate" string="Fecha de nacimiento"/>
+              </group>
+              <group>
+                <field name="character" string="Caracter"/>
+              </group>
+              <group>
+                <field name="habitat" string="Habitat"/>
+              </group>
+              <group>
+                <field name="treating_doctor" string="Medico tratante"/>
+              </group>
+              <group>
+                <field name="hair_type" string="Tipo de pelo"/>
+              </group>
+              <group>
+                <field name="diet" string="Dieta"/>
+              </group>
             </group>
+
             <notebook>
               <page string="Visitas">
                 <field name="visit_ids">
@@ -654,8 +816,12 @@ from . import models
         <menuitem id="menu_visits_list" name="Visitas" parent="menu_animals"
             action="visit_action" sequence="2" />
 
+        <!-- NUEVO MENÚ: Esterilizaciones -->
+        <menuitem id="menu_sterilizations_list" name="Esterilizaciones" parent="menu_animals"
+            action="sterilization_action" sequence="3" />
+
         <menuitem id="menu_medical_management" name="Gestión Médica" parent="menu_animals"
-            action="animals_action" sequence="3" />
+            action="animals_action" sequence="4" />
 
         <menuitem id="menu_medicines_list" name="Medicamentos" parent="menu_medical_management"
             action="medicine_action" />
@@ -674,7 +840,7 @@ from . import models
             action="insurance_action" />
 
         <menuitem id="menu_configuration" name="Configuration" parent="menu_animals"
-            action="animals_action" sequence="4" />
+            action="animals_action" sequence="5" />
 
         <menuitem id="menu_species_list" name="Especies" parent="menu_configuration"
             action="specie_action" sequence="1" />
@@ -687,7 +853,6 @@ from . import models
 
     </data>
 </odoo>
-
 
 === ./views/visit_sequence.xml ===
 <odoo>
@@ -761,6 +926,8 @@ Manage the animals that visit our veterinarian
     # always loaded
     'data': [
         'security/ir.model.access.csv',
+
+        # Vistas base
         'views/animals_views.xml',
         'views/medicines_views.xml',
         'views/allergies_views.xml',
@@ -772,10 +939,18 @@ Manage the animals that visit our veterinarian
         'views/breeds_views.xml',
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
+
+        # IMPORTANTE: Definir la acción de Esterilizaciones ANTES del menú que la usa
+        'views/sterilizations_views.xml',   # <-- MOVIDO ARRIBA
+
+        # Menús (usa acciones ya definidas arriba)
         'views/animals_menus.xml',
+
+        # Secuencias/otros
         'views/visit_sequence.xml',
         'views/animals_identification.xml',
     ],
+
     # only loaded in demonstration mode
     'demo': [
         'demo/demo.xml',
@@ -785,8 +960,6 @@ Manage the animals that visit our veterinarian
     'application': True,  # Esto indica que tu módulo es una aplicación.
     'auto_install': False,
 }
-
-
 
 === ./security/ir.model.access.csv ===
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
@@ -801,10 +974,7 @@ access_animal_surgery,animal.surgery,model_animal_surgery,base.group_user,1,1,1,
 access_animal_vaccine,animal.vaccine,model_animal_vaccine,base.group_user,1,1,1,1
 access_animal_visit,animal.visit,model_animal_visit,base.group_user,1,1,1,1
 access_animal_breed,animal.breed,model_animal_breed,base.group_user,1,1,1,1
-
-
-
-
+access_animal_sterilization,animal.sterilization,model_animal_sterilization,base.group_user,1,1,1,1
 
 
 === ./models/diseases.py ===
@@ -915,6 +1085,7 @@ class Breed(models.Model):
 # -*- coding: utf-8 -*-
 
 from . import animals, allergies, diseases, insurances, medicines, species, surgeries, tag, vaccines, visits, breeds, partner_pet
+from . import sterilizations
 
 
 === ./models/animals.py ===
@@ -967,6 +1138,13 @@ class Animal(models.Model):
     quote_count = fields.Integer(string="Presupuestos", compute="_compute_quote_count")
     invoice_count = fields.Integer(string="Facturas", compute="_compute_invoice_count")
     visit_count = fields.Integer(string="Visitas", compute="_compute_visit_count")
+
+    # ===== NUEVOS CAMPOS SOLICITADOS (se guardan en BD) =====
+    character = fields.Char(string="Carácter")
+    habitat = fields.Char(string="Hábitat")
+    treating_doctor = fields.Char(string="Médico tratante")
+    hair_type = fields.Char(string="Tipo de pelo")
+    diet = fields.Char(string="Dieta")
 
     @api.model
     def create(self, vals):
@@ -1109,3 +1287,129 @@ class Medicine(models.Model):
 
     name = fields.Char(string="Medicamento",required=True)
     description = fields.Text(string="Descripción")
+
+
+=== ./models/sterilizations.py ===
+from odoo import models, fields, api
+
+
+class Sterilization(models.Model):
+    _name = "animal.sterilization"
+    _description = "Registro de esterilizaciones"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = "date desc"
+
+    # ========= Enlaces opcionales =========
+    animal_id = fields.Many2one("animal", string="Animal")
+    owner_id = fields.Many2one("res.partner", string="Responsable")
+
+    # ========= Datos responsable =========
+    date = fields.Date(string="Fecha", tracking=True)
+    resp_rut = fields.Char(string="RUT")
+    resp_birthdate = fields.Date(string="Fecha de nacimiento (responsable)")
+    resp_name = fields.Char(string="Nombre")
+    resp_phone1 = fields.Char(string="Teléfono 1")
+    resp_phone2 = fields.Char(string="Teléfono 2")
+    resp_address = fields.Char(string="Dirección")
+    resp_commune = fields.Char(string="Comuna")
+    resp_region = fields.Char(string="Región")
+    resp_email = fields.Char(string="Mail")
+    resp_is_owner = fields.Boolean(string="¿Es dueño/a de la mascota?")
+
+    # ========= Datos Paciente =========
+    patient_name = fields.Char(string="Nombre (paciente)")
+    specie = fields.Selection([
+        ('canino', 'Canino'),
+        ('felino', 'Felino'),
+        ('otro', 'Otro'),
+    ], string="Especie")
+    breed_text = fields.Char(string="Raza")
+    patient_birthdate = fields.Date(string="Fecha de Nacimiento")
+    sex = fields.Selection([
+        ('macho', 'Macho'),
+        ('hembra', 'Hembra'),
+    ], string="Sexo")
+    color = fields.Char(string="Color")
+    weight = fields.Float(string="Peso (Kg)")
+    pattern = fields.Char(string="Patrón")
+    tenancy_type = fields.Selection([
+        ('con_dueno', 'Con dueño'),
+        ('comunitario', 'Comunitario'),
+        ('sin_dueno', 'Sin dueño'),
+    ], string="Tipo Tenencia")
+    commune_obtention = fields.Char(string="Comuna Obtención")
+    animals_at_home = fields.Integer(string="N° total animales en casa")
+
+    obtention = fields.Selection([
+        ('compra', 'Compra'),
+        ('recogido', 'Recogido'),
+        ('nacio_en_casa', 'Nació en casa'),
+        ('regalo', 'Regalo'),
+        ('adopcion', 'Adopción'),
+        ('na', 'N/A'),
+    ], string="Obtención")
+
+    tenure_reason = fields.Selection([
+        ('asistencia', 'Asistencia'),
+        ('compania', 'Compañía'),
+        ('deporte', 'Deporte'),
+        ('exposicion', 'Exposición'),
+        ('reproduccion', 'Reproducción'),
+        ('seguridad', 'Seguridad'),
+        ('terapia', 'Terapia'),
+        ('trabajo', 'Trabajo'),
+        ('ns', 'N/S'),
+        ('na', 'N/A'),
+        ('otro', 'Otro'),
+    ], string="Razón tenencia")
+    tenure_reason_other = fields.Char(string="Razón tenencia (otro)")
+    already_sterilized = fields.Boolean(string="¿Su mascota ya está esterilizada?")
+    visited_vet_before = fields.Selection([
+        ('si', 'Sí'),
+        ('no', 'No'),
+        ('ns', 'N/S'),
+    ], string="¿Ha asistido antes al Médico Veterinario?")
+    microchip_today = fields.Boolean(string="¿El microchip fue implantado hoy?")
+
+    # ========= Procedimiento =========
+    procedure_type = fields.Selection([
+        ('ovariohisterectomia', 'Ovariohisterectomía'),
+        ('orquiectomia', 'Orquiectomía'),
+    ], string="Procedimiento")
+
+    ovario_approach = fields.Selection([
+        ('linea_alba', 'Línea alba'),
+        ('flanco_izquierdo', 'Flanco izquierdo'),
+        ('flanco_derecho', 'Flanco derecho'),
+        ('mixto', 'Mixto'),
+    ], string="Abordaje (Ovariohisterectomía)")
+
+    orchiectomy_type = fields.Selection([
+        ('pre_escrotal', 'Pre escrotal'),
+        ('escrotal', 'Escrotal'),
+        ('pre_escrotal_inguinal', 'Pre escrotal/inguinal'),
+        ('escrotal_inguinal', 'Escrotal/inguinal'),
+    ], string="Técnica (Orquiectomía)")
+
+    vet_name = fields.Char(string="Nombre M. veterinario/a")
+    vet_rut = fields.Char(string="RUT (médico)")
+    signature = fields.Binary(string="Firma y timbre")
+
+    # ========= Resultado procedimientos =========
+    status = fields.Selection([
+        ('exito', 'Finalizado con éxito'),
+        ('suspendido', 'Suspendido'),
+        ('rechazado', 'Rechazado'),
+        ('fallecido', 'Fallecido'),
+    ], string="Estado")
+    death_cause = fields.Char(string="Causa defunción")
+    death_moment = fields.Selection([
+        ('pre_operatorio', 'Pre operatorio'),
+        ('cirugia', 'Cirugía'),
+        ('post_operatorio', 'Post operatorio'),
+        ('casa', 'Casa'),
+    ], string="Momento de defunción")
+    death_date = fields.Date(string="Fecha defunción")
+
+    # ========= Utilidad / etiquetas =========
+    notes = fields.Text(string="Notas")

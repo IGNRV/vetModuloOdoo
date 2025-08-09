@@ -8,8 +8,12 @@
         <menuitem id="menu_visits_list" name="Visitas" parent="menu_animals"
             action="visit_action" sequence="2" />
 
+        <!-- NUEVO MENÚ: Esterilizaciones -->
+        <menuitem id="menu_sterilizations_list" name="Esterilizaciones" parent="menu_animals"
+            action="sterilization_action" sequence="3" />
+
         <menuitem id="menu_medical_management" name="Gestión Médica" parent="menu_animals"
-            action="animals_action" sequence="3" />
+            action="animals_action" sequence="4" />
 
         <menuitem id="menu_medicines_list" name="Medicamentos" parent="menu_medical_management"
             action="medicine_action" />
@@ -28,7 +32,7 @@
             action="insurance_action" />
 
         <menuitem id="menu_configuration" name="Configuration" parent="menu_animals"
-            action="animals_action" sequence="4" />
+            action="animals_action" sequence="5" />
 
         <menuitem id="menu_species_list" name="Especies" parent="menu_configuration"
             action="specie_action" sequence="1" />

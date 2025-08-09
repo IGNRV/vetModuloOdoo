@@ -23,6 +23,8 @@ Manage the animals that visit our veterinarian
     # always loaded
     'data': [
         'security/ir.model.access.csv',
+
+        # Vistas base
         'views/animals_views.xml',
         'views/medicines_views.xml',
         'views/allergies_views.xml',
@@ -34,10 +36,18 @@ Manage the animals that visit our veterinarian
         'views/breeds_views.xml',
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
+
+        # IMPORTANTE: Definir la acción de Esterilizaciones ANTES del menú que la usa
+        'views/sterilizations_views.xml',   # <-- MOVIDO ARRIBA
+
+        # Menús (usa acciones ya definidas arriba)
         'views/animals_menus.xml',
+
+        # Secuencias/otros
         'views/visit_sequence.xml',
         'views/animals_identification.xml',
     ],
+
     # only loaded in demonstration mode
     'demo': [
         'demo/demo.xml',
@@ -47,4 +57,3 @@ Manage the animals that visit our veterinarian
     'application': True,  # Esto indica que tu módulo es una aplicación.
     'auto_install': False,
 }
-

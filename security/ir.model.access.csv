@@ -10,7 +10,4 @@ access_animal_surgery,animal.surgery,model_animal_surgery,base.group_user,1,1,1,
 access_animal_vaccine,animal.vaccine,model_animal_vaccine,base.group_user,1,1,1,1
 access_animal_visit,animal.visit,model_animal_visit,base.group_user,1,1,1,1
 access_animal_breed,animal.breed,model_animal_breed,base.group_user,1,1,1,1
-
-
-
-
+access_animal_sterilization,animal.sterilization,model_animal_sterilization,base.group_user,1,1,1,1
