@@ -64,6 +64,8 @@ from . import models
                     <field name="treatment" string="Tratamiento" />
                     <field name="rp" string="Rp" />
                     <field name="follow_up" string="Control" />
+                    <!-- Nuevo: permitir buscar por médico -->
+                    <field name="doctor" string="Dr/Dra" />
 
                     <group expand="0" string="Visit info">
                         <filter name="animal_id" string="Animal" domain="[('animal_id','=','self')]"
@@ -106,43 +108,60 @@ from . import models
             <field name="arch" type="xml">
                 <form>
                     <sheet>
+                        <!-- Referencia arriba como título -->
                         <group>
                             <field class="fs-1" name="sequence" />
-                            <group>
-                                <field name="animal_id" />
-                            </group>
-                            <group>
-                                <field name="owner" />
-                            </group>
-                            <group>
-                                <field name="date" />
+                        </group>
+
+                        <!-- ===== DISTRIBUCIÓN EN DOS COLUMNAS (IZQ más ancha) ===== -->
+                        <!--
+                             Primer group: left (colspan=2) = FICHA CLÍNICA (dos subcolumnas)
+                             Segundo group: right = Datos administrativos (Animal, Dueño, Fecha + Dr/Dra)
+                        -->
+                        <group>
+                            <!-- Columna DERECHA (más estrecha) -->
+                            <group string="Datos de la Visita">
+                                <group>
+                                    <field name="animal_id" />
+                                </group>
+                                <group>
+                                    <field name="owner" />
+                                </group>
+                                <!-- Fecha y Dr/Dra en la MISMA FILA: Dr/Dra a la derecha de Fecha -->
+                                <group>
+                                    <group>
+                                        <field name="date" />
+                                    </group>
+                                    <group>
+                                        <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional" />
+                                    </group>
+                                </group>
                             </group>
 
-                            <!-- ===== FICHA CLÍNICA en dos columnas ===== -->
-                            <group string="Ficha Clínica">
-                                <!-- Columna izquierda -->
+                            <!-- Columna IZQUIERDA (más ancha) -->
+                            <group string="Ficha Clínica" colspan="2">
+                                <!-- Dos columnas internas dentro de Ficha Clínica -->
                                 <group>
                                     <field name="consultation_reason" placeholder="Describa el motivo de la consulta..." />
                                     <field name="clinical_exam" placeholder="Hallazgos del examen clínico..." />
                                     <field name="treatment" placeholder="Tratamiento indicado..." />
                                     <field name="follow_up" placeholder="Fecha/Indicaciones de control..." />
                                 </group>
-                                <!-- Columna derecha -->
                                 <group>
                                     <field name="anamnesis" placeholder="Antecedentes remotos y actuales relevantes..." />
                                     <field name="prediagnoses" placeholder="Listado de diagnósticos presuntivos..." />
                                     <field name="rp" placeholder="Receta / prescripción (Rp)..." />
                                 </group>
                             </group>
-
-                            <!-- Campos antiguos mantenidos (opcional, puedes ocultarlos si ya no se usan)
-                            <group string="(Histórico)">
-                                <field name="reason" />
-                                <field name="suggested_treatment" />
-                                <field name="observations" />
-                            </group>
-                            -->
                         </group>
+
+                        <!-- Campos antiguos mantenidos (opcional, puedes ocultarlos si ya no se usan)
+                        <group string="(Histórico)">
+                            <field name="reason" />
+                            <field name="suggested_treatment" />
+                            <field name="observations" />
+                        </group>
+                        -->
                     </sheet>
                     <div class="oe_chatter">
                         <field widget="mail_thread" name="message_ids" />
@@ -854,6 +873,9 @@ class Visit(models.Model):
     treatment = fields.Text(string="Tratamiento")
     rp = fields.Text(string="Rp")
     follow_up = fields.Text(string="Control")
+
+    # ---- NUEVO CAMPO: MÉDICO RESPONSABLE ----
+    doctor = fields.Char(string="Dr/Dra")  # mostrado a la derecha de "Fecha" en el formulario
 
     sequence = fields.Char(
         string="Referencia",

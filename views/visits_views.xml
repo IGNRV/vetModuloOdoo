@@ -18,6 +18,8 @@
                     <field name="treatment" string="Tratamiento" />
                     <field name="rp" string="Rp" />
                     <field name="follow_up" string="Control" />
+                    <!-- Nuevo: permitir buscar por médico -->
+                    <field name="doctor" string="Dr/Dra" />
 
                     <group expand="0" string="Visit info">
                         <filter name="animal_id" string="Animal" domain="[('animal_id','=','self')]"
@@ -68,10 +70,10 @@
                         <!-- ===== DISTRIBUCIÓN EN DOS COLUMNAS (IZQ más ancha) ===== -->
                         <!--
                              Primer group: left (colspan=2) = FICHA CLÍNICA (dos subcolumnas)
-                             Segundo group: right = Datos administrativos (Animal, Dueño, Fecha)
+                             Segundo group: right = Datos administrativos (Animal, Dueño, Fecha + Dr/Dra)
                         -->
                         <group>
-                                                    <!-- Columna DERECHA (más estrecha) -->
+                            <!-- Columna DERECHA (más estrecha) -->
                             <group string="Datos de la Visita">
                                 <group>
                                     <field name="animal_id" />
@@ -79,10 +81,13 @@
                                 <group>
                                     <field name="owner" />
                                 </group>
-                                <group>
-                                    <field name="date" />
+                                <!-- Fecha y Dr/Dra en la MISMA FILA con Dr/Dra más ancho -->
+                                <group col="4">
+                                    <field name="date" colspan="1"/>
+                                    <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional" colspan="3"/>
                                 </group>
                             </group>
+
                             <!-- Columna IZQUIERDA (más ancha) -->
                             <group string="Ficha Clínica" colspan="2">
                                 <!-- Dos columnas internas dentro de Ficha Clínica -->
@@ -98,8 +103,6 @@
                                     <field name="rp" placeholder="Receta / prescripción (Rp)..." />
                                 </group>
                             </group>
-
-
                         </group>
 
                         <!-- Campos antiguos mantenidos (opcional, puedes ocultarlos si ya no se usan)

@@ -28,6 +28,9 @@ class Visit(models.Model):
     rp = fields.Text(string="Rp")
     follow_up = fields.Text(string="Control")
 
+    # ---- NUEVO CAMPO: MÉDICO RESPONSABLE ----
+    doctor = fields.Char(string="Dr/Dra")  # mostrado a la derecha de "Fecha" en el formulario
+
     sequence = fields.Char(
         string="Referencia",
         required=True,
