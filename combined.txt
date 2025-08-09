@@ -58,6 +58,7 @@ from . import models
           .stz .pagebreak { page-break-after: always; }
           .stz .sig { height:60px; }
           .stz .muted { color:#666; }
+          .stz .line { display:inline-block; border-bottom:1px solid #555; min-width:140px; height:14px; vertical-align:bottom; }
         </style>
 
         <div class="stz">
@@ -249,15 +250,60 @@ from . import models
             </tr>
           </table>
 
-          <!-- Declaración / texto -->
+          <!-- Esterilización (texto completo) -->
           <table>
             <tr><th class="section">Esterilización</th></tr>
             <tr>
               <td class="small">
-                Declaro que me han explicado detalladamente el procedimiento quirúrgico al que será sometida mi mascota y manifiesto entender que se extraerán definitivamente los órganos reproductores de ésta.
-                Se me ha explicado además que, por su naturaleza, este procedimiento involucra riesgos generales y complicaciones que, a pesar de todas las medidas y cuidados efectuados por el equipo médico, pueden ser inevitables y no son imputables por las lesiones que llegasen a causar la muerte de mi mascota.
-                Asimismo declaro estar en conocimiento y consentir que, como todo procedimiento quirúrgico, requiere sedación y anestesia general, lo que puede conllevar complicaciones propias o asociadas, incluyendo efectos adversos.
-                Declaro que se me otorgó suficiente espacio de preguntas y se me brindó toda la información necesaria para la toma de decisiones.
+                Declaro que me han explicado detalladamente el procedimiento quirúrgico al que será sometida mi mascota y manifiesto entender que se extraerán definitivamente los órganos reproductores de ésta.<br/>
+                Se me ha explicado además que, por su naturaleza, este procedimiento involucra riesgos generales y complicaciones que, a pesar de todas las medidas y cuidados efectuados por el equipo médico, pueden ser inevitables y en un bajo porcentaje de los casos llegar incluso a causar la muerte de mi mascota.<br/>
+                Además declaro estar en conocimiento y consentir que, como todo procedimiento quirúrgico, requiere sedación y anestesia general, lo que puede estar asociado a complicaciones propias de su ejecución.<br/>
+                Entiendo que siempre existe una posibilidad de que, en beneficio del paciente, el cirujano suspenda la cirugía o que varíe la técnica escogida previamente.<br/>
+                Sé que todo procedimiento tiene limitaciones donde a veces no se logran los beneficios esperados, que ante la obtención de resultados parciales y/o complicaciones se hace necesario re intervenir o realizar procedimientos complementarios, que depende de factores variables e inadvertidos, y que en tal caso deberé asumir los gastos que ello implique.<br/>
+                Declaro que he entregado información veraz sobre la salud de mi mascota y si ésta ha presentado en estos últimos 10 días: vómitos, diarrea, tos, secreciones oculares y nasales, descoordinación, anorexia, traumas, convulsiones.<br/>
+                Manifiesto que toda la información entregada para la confección de esta ficha es fidedigna.<br/>
+                Declaro cumplir con las horas de ayuno de agua y alimento que me indicaron para mi mascota y traer los implementos solicitados. Acepto que una de sus orejas será tatuada con la finalidad de registrar que fue esterilizado.<br/>
+                Entiendo y acepto que tener a un animal sin dueño no implica la propiedad de él, sin embargo, sí implica la responsabilidad de los cuidados e indicaciones hasta su recuperación.<br/>
+                Declaro no me encuentro afecto a la Inhabilidad absoluta y perpetua para la Tenencia de Animales, pena por simple delito contemplada en el Artículo 21 del Código Penal, para las personas que sean condenadas por el Delito de Maltrato o Crueldad Animal tipificado en el Artículo 291 Bis y Ter del Código Penal.
+              </td>
+            </tr>
+          </table>
+
+          <!-- Registro e identificación -->
+          <table>
+            <tr><th class="section">Registro e Identificación</th></tr>
+            <tr>
+              <td class="small">
+                Declaro entender que a mi mascota se le ha implantado un microchip, dispositivo electrónico subcutáneo que contiene un número único que será vinculado a mis datos personales. Autorizo a la municipalidad para efectuar la inscripción de mi mascota en el Registro Nacional de Mascotas o Animales de Compañía. Autorizo el despliegue de mis datos: Teléfono Fijo, Teléfono Celular y Correo Electrónico en caso de extravío de mi(s) mascota(s).
+              </td>
+            </tr>
+          </table>
+
+          <!-- Egreso -->
+          <table>
+            <tr><th class="section">Egreso</th></tr>
+            <tr>
+              <td class="small">
+                Declaro que he recibido a mi mascota y el documento de cuidados post operatorios. Se me ha explicado y entiendo las indicaciones de los cuidados que debo realizar, asumiendo total responsabilidad durante este proceso. Entiendo los riesgos que existen para el bienestar y la recuperación del paciente si no efectúo las indicaciones que me entregaron. Me adhiero a la receta, controles y otros que me hayan señalado.<br/>
+                He sido instruido en que si mi mascota presenta signos de decaimiento, falta de apetito, vómitos, diarrea, hemorragias, aumento de volumen, secreciones, fiebre, dolor, dificultad respiratoria, convulsiones u otros signos de alarma, debo llevarla inmediatamente a control.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Mi mascota ha sido entregada:
+                &#160; <span class="checkbox"/> viva
+                &#160;&#160;&#160;
+                <span class="checkbox"/> fallecida
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Estado:
+                &#160; <span class="checkbox"/> consciente
+                &#160;&#160;&#160; <span class="checkbox"/> se levanta sola
+                &#160;&#160;&#160; <span class="checkbox"/> limpia
+                &#160;&#160;&#160; <span class="checkbox"/> identidad corroborada con microchip
+                &#160;&#160;&#160; <span class="checkbox"/> herida sin sangre
               </td>
             </tr>
           </table>
@@ -273,7 +319,7 @@ from . import models
           </table>
 
           <!-- Pie simple con firmas (paciente/propietario) -->
-          <table class="noborder" style="margin-top:30px;">
+          <table class="noborder" style="margin-top:18px;">
             <tr class="noborder">
               <td class="noborder center" style="width:50%">
                 _________________________________<br/>
@@ -285,13 +331,13 @@ from . import models
               </td>
             </tr>
           </table>
-
         </div>
       </t>
     </template>
 
   </data>
 </odoo>
+
 
 === ./demo/demo.xml ===
 <odoo>

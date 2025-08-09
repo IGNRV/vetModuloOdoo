@@ -318,11 +318,6 @@
               </td>
             </tr>
           </table>
-
-          <div class="muted small" style="margin-top:8px;">
-            Generado por Odoo — <t t-esc="(o.patient_name or (o.animal_id and o.animal_id.name)) or ''"/> — <t t-esc="o.date or ''"/>
-          </div>
-
         </div>
       </t>
     </template>
