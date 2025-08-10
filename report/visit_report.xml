@@ -1,6 +1,21 @@
 <odoo>
   <data>
 
+    <!-- ===== Paperformat SIN header reservado para este reporte (Odoo 17) ===== -->
+    <record id="paperformat_visit_noheader" model="report.paperformat">
+      <field name="name">Visit PDF (no header)</field>
+      <field name="format">A4</field>
+      <field name="orientation">Portrait</field>
+      <!-- Márgenes ajustados: sin header, dejamos un top pequeño -->
+      <field name="margin_top">6</field>
+      <field name="margin_bottom">8</field>
+      <field name="margin_left">10</field>
+      <field name="margin_right">10</field>
+      <!-- Clave: no reservar espacio de encabezado -->
+      <field name="header_line">False</field>
+      <field name="header_spacing">0</field>
+    </record>
+
     <!-- Acción de reporte PDF -->
     <record id="action_report_visit" model="ir.actions.report">
       <field name="name">Ficha Atención Veterinaria</field>
@@ -8,6 +23,8 @@
       <field name="report_type">qweb-pdf</field>
       <field name="report_name">vet.report_visit</field>
       <field name="report_file">vet.report_visit</field>
+      <!-- Usamos el paperformat sin header -->
+      <field name="paperformat_id" ref="vet.paperformat_visit_noheader"/>
       <field name="print_report_name">
         (object.sequence or 'Visita') + ' - Ficha de Atención.pdf'
       </field>
@@ -84,6 +101,26 @@
             display: block;
             margin: 0 auto;
           }
+
+          /* ===== Ocultar el pie y el header estándar SOLO en este reporte ===== */
+          .footer,
+          .o_footer,
+          .o_report_layout_standard .footer,
+          .o_report_layout_boxed .footer,
+          .o_report_layout_bold .footer,
+          .header,
+          .o_header,
+          .o_report_layout_standard .header,
+          .o_report_layout_boxed .header,
+          .o_report_layout_bold .header {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+          }
+          .footer * { border: 0 !important; }
         </style>
 
         <div class="visit">
