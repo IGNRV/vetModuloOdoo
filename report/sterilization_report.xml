@@ -88,13 +88,14 @@
 
         <div class="stz">
 
-          <!-- Cabecera / imagen de título -->
+          <!-- Cabecera: imagen (izquierda) + microchip (derecha) -->
           <table class="noborder">
             <tr>
-              <td class="noborder" style="width:65%">
-                <!-- Mostramos la imagen en lugar de los textos de título/subtítulo -->
+              <td class="noborder" style="width:65%; vertical-align:middle;">
+                <!-- Se inyecta via parser como base64 para evitar problemas de rutas en wkhtmltopdf -->
                 <img class="title-image"
-                     t-att-src="'/vet/static/src/img/sterilizacion_header.png'"
+                     t-if="stz_title_image"
+                     t-att-src="'data:image/png;base64,%s' % (stz_title_image)"
                      alt="Esterilización - Ficha de Identificación, Consentimiento y Declaración simple"/>
               </td>
               <td class="noborder" style="width:35%">

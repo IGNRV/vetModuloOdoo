@@ -46,14 +46,13 @@
 
           /* === ESPACIO PARA FIRMAR + LÍNEA JUSTO SOBRE EL TEXTO === */
           .visit .signbox {
-            /* quitamos la línea arriba del contenedor */
             text-align: center;
-            padding-top: 80px;   /* espacio libre para la rúbrica */
-            min-height: 110px;   /* alto total del bloque de firma */
+            padding-top: 80px;
+            min-height: 110px;
           }
           .visit .sigline {
-            border-top: 1px solid #000;  /* línea de firma */
-            margin: 0 6px 6px;           /* un poco de espacio antes del texto */
+            border-top: 1px solid #000;
+            margin: 0 6px 6px;
           }
           .visit .siglabel {
             font-size: 11px;
@@ -71,11 +70,20 @@
           .visit .header-strip { margin-bottom: 4px; }
           .visit .header-image {
             max-width: 100%;
-            height: auto;       /* respeta proporciones (se ve tal cual) */
+            height: auto;
             display: block;
-            margin: 0 auto;     /* centrada si no ocupa todo el ancho */
+            margin: 0 auto;
           }
           .visit .header-date { text-align: right; margin: 2px 0 6px; }
+
+          /* ====== Franja decorativa BAJO el título ====== */
+          .visit .divider-strip { margin: 4px 0 10px; }
+          .visit .divider-image {
+            max-width: 100%;
+            height: auto;       /* se ve tal cual, sin deformar */
+            display: block;
+            margin: 0 auto;
+          }
         </style>
 
         <div class="visit">
@@ -83,7 +91,8 @@
           <!-- Cabecera: imagen adjunta (tal cual) + fecha -->
           <div class="header-strip">
             <img class="header-image"
-                 t-att-src="'/vet/static/src/img/visita_header.png'"
+                 t-if="visit_header_image"
+                 t-att-src="'data:image/png;base64,%s' % (visit_header_image)"
                  alt="Encabezado Veterinaria Municipal de Melipilla"/>
           </div>
           <div class="header-date">
@@ -94,6 +103,14 @@
           </div>
 
           <div class="title" style="margin:6px 0;">FICHA ATENCIÓN VETERINARIA</div>
+
+          <!-- === Franja/imagen justo DEBAJO del título === -->
+          <div class="divider-strip">
+            <img class="divider-image"
+                 t-if="visit_divider_image"
+                 t-att-src="'data:image/png;base64,%s' % (visit_divider_image)"
+                 alt="Franja decorativa"/>
+          </div>
 
           <!-- Información del propietario -->
           <table class="boxed" style="margin-top:6px;">

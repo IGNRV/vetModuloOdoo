@@ -21,9 +21,9 @@ Manage the animals that visit our veterinarian
     'data': [
         'security/ir.model.access.csv',
 
-        # === Reportes (deben cargarse ANTES de las vistas que referencian sus acciones) ===
+        # === Reportes ===
         'report/sterilization_report.xml',
-        'report/visit_report.xml',          # <-- acción + plantilla PDF de Visitas
+        'report/visit_report.xml',
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -32,16 +32,16 @@ Manage the animals that visit our veterinarian
         'views/surgeries_views.xml',
         'views/vaccines_views.xml',
         'views/insurances_views.xml',
-        'views/visits_views.xml',           # <-- ahora viene DESPUÉS del reporte
+        'views/visits_views.xml',
         'views/species_views.xml',
         'views/breeds_views.xml',
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
 
-        # IMPORTANTE: acción de Esterilizaciones ya está arriba; aquí la vista que la usa
+        # Vistas de Esterilizaciones
         'views/sterilizations_views.xml',
 
-        # Menús (usa acciones ya definidas arriba)
+        # Menús
         'views/animals_menus.xml',
 
         # Secuencias/otros
@@ -53,7 +53,13 @@ Manage the animals that visit our veterinarian
     'demo': [
         'demo/demo.xml',
     ],
-    "images": ['static/images/banner.png', 'static/description/icon.png'],
+    "images": [
+        "static/images/banner.png",
+        "static/description/icon.png",
+        "static/src/img/visita_header.png",
+        "static/src/img/visita_divider.png",
+        "static/src/img/sterilizacion_header.png"  # <-- añadida para empaquetado
+    ],
     'installable': True,
     'application': True,
     'auto_install': False,
