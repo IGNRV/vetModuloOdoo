@@ -336,16 +336,25 @@ from . import models
           }
           /* Por si algún tema dibuja un borde dentro del pie */
           .footer * { border: 0 !important; }
+
+          /* ===== Imagen de cabecera (título) ===== */
+          .stz .title-image {
+            max-height: 70px;     /* ajusta si quieres más alto/bajo */
+            width: auto;
+            display: block;
+          }
         </style>
 
         <div class="stz">
 
-          <!-- Cabecera / título -->
+          <!-- Cabecera / imagen de título -->
           <table class="noborder">
             <tr>
               <td class="noborder" style="width:65%">
-                <div class="title">Esterilización</div>
-                <div class="subtitle">Ficha de Identificación, Consentimiento y Declaración simple</div>
+                <!-- Mostramos la imagen en lugar de los textos de título/subtítulo -->
+                <img class="title-image"
+                     t-att-src="'/vet/static/src/img/sterilizacion_header.png'"
+                     alt="Esterilización - Ficha de Identificación, Consentimiento y Declaración simple"/>
               </td>
               <td class="noborder" style="width:35%">
                 <table>

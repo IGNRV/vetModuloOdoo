@@ -66,28 +66,32 @@
           .visit .signrow { display: table; width: 100%; margin-top: 28px; border: 0 !important; }
           .visit .signcol { display: table-cell; width: 50%; padding: 0 6px; vertical-align: top; border: 0 !important; }
           .visit .signrow *, .visit .signrow { outline: none !important; }
+
+          /* ====== Encabezado con imagen ====== */
+          .visit .header-strip { margin-bottom: 4px; }
+          .visit .header-image {
+            max-width: 100%;
+            height: auto;       /* respeta proporciones (se ve tal cual) */
+            display: block;
+            margin: 0 auto;     /* centrada si no ocupa todo el ancho */
+          }
+          .visit .header-date { text-align: right; margin: 2px 0 6px; }
         </style>
 
         <div class="visit">
 
-          <!-- Cabecera con logos y fecha -->
-          <table>
-            <tr>
-              <td class="logo-box col2 small">
-                Veterinaria<br/>MUNICIPAL DE MELIPILLA
-              </td>
-              <td class="col2" style="text-align:right;">
-                <div>Fecha:
-                  <span class="val2">
-                    <span t-field="o.date" t-options='{"widget": "date"}'/>
-                  </span>
-                </div>
-              </td>
-              <td class="logo-box col2 small">
-                Municipalidad de Melipilla
-              </td>
-            </tr>
-          </table>
+          <!-- Cabecera: imagen adjunta (tal cual) + fecha -->
+          <div class="header-strip">
+            <img class="header-image"
+                 t-att-src="'/vet/static/src/img/visita_header.png'"
+                 alt="Encabezado Veterinaria Municipal de Melipilla"/>
+          </div>
+          <div class="header-date">
+            Fecha:
+            <span class="val2">
+              <span t-field="o.date" t-options='{"widget": "date"}'/>
+            </span>
+          </div>
 
           <div class="title" style="margin:6px 0;">FICHA ATENCIÓN VETERINARIA</div>
 
