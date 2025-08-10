@@ -55,22 +55,47 @@
           .stz .signbox { text-align: center; padding-top: 60px; min-height: 80px; }
           /* Línea de firma visible justo encima del texto */
           .stz .sigline { border-top: 1px solid #555; margin: 0 12% 4px; height: 0; }
-          .stz .siglabel { font-size: 10px; }
+          .stz .siglabel { font-size: 15px; }
           /* Anular bordes SOLO en los contenedores, no en la línea */
           .stz .signrow,
           .stz .signcol,
           .stz .signbox,
           .stz .siglabel { border: 0 !important; outline: none !important; }
+
+          /* ===== Ocultar el pie estándar (línea + contacto + "Página: x / y") SOLO en este reporte ===== */
+          .footer,
+          .o_footer,
+          .o_report_layout_standard .footer,
+          .o_report_layout_boxed .footer,
+          .o_report_layout_bold .footer {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+          }
+          /* Por si algún tema dibuja un borde dentro del pie */
+          .footer * { border: 0 !important; }
+
+          /* ===== Imagen de cabecera (título) ===== */
+          .stz .title-image {
+            max-height: 70px;     /* ajusta si quieres más alto/bajo */
+            width: auto;
+            display: block;
+          }
         </style>
 
         <div class="stz">
 
-          <!-- Cabecera / título -->
+          <!-- Cabecera / imagen de título -->
           <table class="noborder">
             <tr>
               <td class="noborder" style="width:65%">
-                <div class="title">Esterilización</div>
-                <div class="subtitle">Ficha de Identificación, Consentimiento y Declaración simple</div>
+                <!-- Mostramos la imagen en lugar de los textos de título/subtítulo -->
+                <img class="title-image"
+                     t-att-src="'/vet/static/src/img/sterilizacion_header.png'"
+                     alt="Esterilización - Ficha de Identificación, Consentimiento y Declaración simple"/>
               </td>
               <td class="noborder" style="width:35%">
                 <table>
@@ -192,11 +217,11 @@
             <tr>
               <td style="width:14%">Procedimiento</td>
               <td style="width:20%"><span t-esc="dict(o._fields['procedure_type'].selection).get(o.procedure_type) if o.procedure_type else ''"/></td>
-              <td style="width:18%">Abordaje (OVH)</td>
+              <td style="width:18%">Abordaje</td>
               <td style="width:16%">
                 <span t-esc="dict(o._fields['ovario_approach'].selection).get(o.ovario_approach) if (o.procedure_type == 'ovariohisterectomia' and o.ovario_approach) else ''"/>
               </td>
-              <td style="width:16%">Técnica (Orquiectomía)</td>
+              <td style="width:16%">Técnica</td>
               <td colspan="3">
                 <span t-esc="dict(o._fields['orchiectomy_type'].selection).get(o.orchiectomy_type) if (o.procedure_type == 'orquiectomia' and o.orchiectomy_type) else ''"/>
               </td>
