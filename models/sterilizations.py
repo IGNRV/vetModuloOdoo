@@ -26,12 +26,24 @@ class Sterilization(models.Model):
 
     # ========= Datos Paciente =========
     patient_name = fields.Char(string="Nombre (paciente)")
-    specie = fields.Selection([
-        ('canino', 'Canino'),
-        ('felino', 'Felino'),
-        ('otro', 'Otro'),
-    ], string="Especie")
-    breed_text = fields.Char(string="Raza")
+
+    # Antes: 'specie' era Selection. Ahora usamos Many2one a animal.specie.
+    specie_id = fields.Many2one(
+        "animal.specie",
+        string="Especie",
+        ondelete="restrict",
+        tracking=True,
+    )
+
+    # Antes: 'breed_text' era Char. Ahora Many2one a animal.breed, filtrada por especie.
+    breed_id = fields.Many2one(
+        "animal.breed",
+        string="Raza",
+        domain="[('specie', '=', specie_id)]",
+        ondelete="restrict",
+        tracking=True,
+    )
+
     patient_birthdate = fields.Date(string="Fecha de Nacimiento")
     sex = fields.Selection([
         ('macho', 'Macho'),
@@ -121,3 +133,15 @@ class Sterilization(models.Model):
 
     # ========= Utilidad / etiquetas =========
     notes = fields.Text(string="Notas")
+
+    # ====== Sugerencia: al elegir animal, precargar especie/raza si existen ======
+    @api.onchange('animal_id')
+    def _onchange_animal_id_fill_species_breed(self):
+        for rec in self:
+            if rec.animal_id:
+                rec.specie_id = rec.animal_id.species.id or False
+                # si la raza del animal coincide con la especie, se sugiere
+                if rec.animal_id.breed and (not rec.specie_id or rec.animal_id.breed.specie.id == rec.specie_id.id):
+                    rec.breed_id = rec.animal_id.breed.id
+                else:
+                    rec.breed_id = False

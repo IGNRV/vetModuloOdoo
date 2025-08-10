@@ -188,11 +188,13 @@
               <td style="width:10%">Nombre</td>
               <td style="width:16%"><span t-esc="o.patient_name or (o.animal_id and o.animal_id.name) or ''"/></td>
               <td style="width:10%">Especie</td>
-              <td style="width:12%"><span t-esc="dict(o._fields['specie'].selection).get(o.specie) if o.specie else ''"/></td>
+              <!-- Antes: dict(o._fields['specie'].selection).get(o.specie) -->
+              <td style="width:12%"><span t-esc="o.specie_id and o.specie_id.name or ''"/></td>
               <td style="width:8%">Sexo</td>
               <td style="width:10%"><span t-esc="dict(o._fields['sex'].selection).get(o.sex) if o.sex else ''"/></td>
               <td style="width:8%">Raza</td>
-              <td style="width:10%"><span t-esc="o.breed_text or ''"/></td>
+              <!-- Antes: o.breed_text -->
+              <td style="width:10%"><span t-esc="o.breed_id and o.breed_id.name or ''"/></td>
               <td style="width:8%">Color</td>
               <td style="width:8%"><span t-esc="o.color or ''"/></td>
               <td style="width:4%">Patrón</td>
@@ -336,7 +338,7 @@
             </tr>
           </table>
 
-          <!-- Registro e identificación -->
+          <!-- Registro e Identificación -->
           <table>
             <tr><th class="section">Registro e Identificación</th></tr>
             <tr>

@@ -8,13 +8,15 @@
       <field name="arch" type="xml">
         <search>
           <field name="patient_name" string="Paciente"/>
-          <field name="specie" string="Especie"/>
+          <!-- Antes: specie (Selection). Ahora: specie_id (Many2one). -->
+          <field name="specie_id" string="Especie"/>
           <field name="sex" string="Sexo"/>
           <field name="date" string="Fecha"/>
           <field name="status" string="Estado"/>
           <field name="vet_name" string="Médico/a"/>
           <group expand="0" string="Agrupar por">
-            <filter name="grp_specie" string="Especie" context="{'group_by':'specie'}"/>
+            <!-- Actualizamos el group_by a specie_id -->
+            <filter name="grp_specie" string="Especie" context="{'group_by':'specie_id'}"/>
             <filter name="grp_status" string="Estado" context="{'group_by':'status'}"/>
             <filter name="grp_vet" string="Médico/a" context="{'group_by':'vet_name'}"/>
             <filter name="grp_date" string="Fecha" context="{'group_by': 'date:month'}"/>
@@ -31,7 +33,8 @@
         <tree string="Esterilizaciones">
           <field name="date"/>
           <field name="patient_name"/>
-          <field name="specie"/>
+          <!-- Antes: specie. Ahora: specie_id. -->
+          <field name="specie_id" string="Especie"/>
           <field name="sex"/>
           <field name="weight"/>
           <field name="procedure_type"/>
@@ -85,8 +88,15 @@
             <!-- ===== Datos Paciente ===== -->
             <group string="Datos Paciente" col="4">
               <field name="patient_name" string="Nombre"/>
-              <field name="specie"/>
-              <field name="breed_text" string="Raza"/>
+
+              <!-- Antes: <field name="specie"/> -->
+              <field name="specie_id" string="Especie" options="{'no_open': False, 'no_create_edit': False}"/>
+
+              <!-- Antes: <field name="breed_text" string="Raza"/> -->
+              <field name="breed_id" string="Raza"
+                     domain="[('specie', '=', specie_id)]"
+                     options="{'no_open': False, 'no_create_edit': False}"/>
+
               <field name="patient_birthdate" string="Fecha de Nacimiento"/>
               <field name="sex"/>
               <field name="color"/>
