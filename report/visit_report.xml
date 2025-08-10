@@ -43,9 +43,29 @@
           .visit .logo-box { border:1px solid #000; height:55px; text-align:center; }
           .visit .lines { height: 84px; border-bottom: 1px solid #000; }
           .visit .lines.tall { height: 110px; }
-          .visit .signbox { height: 50px; border-top: 1px solid #000; text-align:center; }
+
+          /* === ESPACIO PARA FIRMAR + LÍNEA JUSTO SOBRE EL TEXTO === */
+          .visit .signbox {
+            /* quitamos la línea arriba del contenedor */
+            text-align: center;
+            padding-top: 80px;   /* espacio libre para la rúbrica */
+            min-height: 110px;   /* alto total del bloque de firma */
+          }
+          .visit .sigline {
+            border-top: 1px solid #000;  /* línea de firma */
+            margin: 0 6px 6px;           /* un poco de espacio antes del texto */
+          }
+          .visit .siglabel {
+            font-size: 11px;
+          }
+
           .visit .col2 { width:50%; }
           .visit .small { font-size: 11px; }
+
+          /* ====== Layout de firmas SIN tablas (evita cualquier recuadro) ====== */
+          .visit .signrow { display: table; width: 100%; margin-top: 28px; border: 0 !important; }
+          .visit .signcol { display: table-cell; width: 50%; padding: 0 6px; vertical-align: top; border: 0 !important; }
+          .visit .signrow *, .visit .signrow { outline: none !important; }
         </style>
 
         <div class="visit">
@@ -197,17 +217,21 @@
             <tr><td class="lines"><t t-esc="o.follow_up or ''"/></td></tr>
           </table>
 
-          <!-- Firmas -->
-          <table style="margin-top:28px;">
-            <tr>
-              <td class="col2">
-                <div class="signbox">FIRMA PROPIETARIO</div>
-              </td>
-              <td class="col2">
-                <div class="signbox">FIRMA MÉDICO VETERINARIO</div>
-              </td>
-            </tr>
-          </table>
+          <!-- Firmas (SIN tablas, SIN recuadro externo) -->
+          <div class="signrow">
+            <div class="signcol">
+              <div class="signbox">
+                <div class="sigline"></div>
+                <div class="siglabel">FIRMA PROPIETARIO</div>
+              </div>
+            </div>
+            <div class="signcol">
+              <div class="signbox">
+                <div class="sigline"></div>
+                <div class="siglabel">FIRMA MÉDICO VETERINARIO</div>
+              </div>
+            </div>
+          </div>
 
           <div class="small muted" style="margin-top:6px;">
             Ref.: <t t-esc="o.sequence or ''"/> — Paciente: <t t-esc="o.animal_id and o.animal_id.name or ''"/>

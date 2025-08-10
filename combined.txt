@@ -56,9 +56,23 @@ from . import models
           .visit .logo-box { border:1px solid #000; height:55px; text-align:center; }
           .visit .lines { height: 84px; border-bottom: 1px solid #000; }
           .visit .lines.tall { height: 110px; }
-          .visit .signbox { height: 50px; border-top: 1px solid #000; text-align:center; }
+
+          /* === AJUSTE: más espacio para la firma arriba del texto === */
+          .visit .signbox {
+            border-top: 1px solid #000;
+            text-align: center;
+            /* Espacio donde se escribe la firma (sobre el rótulo) */
+            padding-top: 80px;     /* espacio de firma */
+            min-height: 110px;     /* asegura buen alto total en PDF */
+          }
+
           .visit .col2 { width:50%; }
           .visit .small { font-size: 11px; }
+
+          /* ====== Layout de firmas SIN tablas (evita cualquier recuadro) ====== */
+          .visit .signrow { display: table; width: 100%; margin-top: 28px; border: 0 !important; }
+          .visit .signcol { display: table-cell; width: 50%; padding: 0 6px; vertical-align: top; border: 0 !important; }
+          .visit .signrow *, .visit .signrow { outline: none !important; }
         </style>
 
         <div class="visit">
@@ -70,9 +84,11 @@ from . import models
                 Veterinaria<br/>MUNICIPAL DE MELIPILLA
               </td>
               <td class="col2" style="text-align:right;">
-                <div>Fecha: <span class="val2">
-                  <t t-if="o.date"><t t-esc="o.date.strftime('%d/%m/%Y')"/></t>
-                </span></div>
+                <div>Fecha:
+                  <span class="val2">
+                    <span t-field="o.date" t-options='{"widget": "date"}'/>
+                  </span>
+                </div>
               </td>
               <td class="logo-box col2 small">
                 Municipalidad de Melipilla
@@ -208,17 +224,15 @@ from . import models
             <tr><td class="lines"><t t-esc="o.follow_up or ''"/></td></tr>
           </table>
 
-          <!-- Firmas -->
-          <table style="margin-top:28px;">
-            <tr>
-              <td class="col2">
-                <div class="signbox">FIRMA PROPIETARIO</div>
-              </td>
-              <td class="col2">
-                <div class="signbox">FIRMA MÉDICO VETERINARIO</div>
-              </td>
-            </tr>
-          </table>
+          <!-- Firmas (SIN tablas, SIN recuadro externo) -->
+          <div class="signrow">
+            <div class="signcol">
+              <div class="signbox">FIRMA PROPIETARIO</div>
+            </div>
+            <div class="signcol">
+              <div class="signbox">FIRMA MÉDICO VETERINARIO</div>
+            </div>
+          </div>
 
           <div class="small muted" style="margin-top:6px;">
             Ref.: <t t-esc="o.sequence or ''"/> — Paciente: <t t-esc="o.animal_id and o.animal_id.name or ''"/>
@@ -1482,9 +1496,6 @@ Manage the animals that visit our veterinarian
     'author': "Javier Diez",
     'website': "https://javierdiez.netlify.app/",
     'license': 'AGPL-3',
-    # Categories can be used to filter modules in modules listing
-    # Check https://github.com/odoo/odoo/blob/15.0/odoo/addons/base/data/ir_module_category_data.xml
-    # for the full list
     'category': 'Animales',
     'version': '1.0',
 
@@ -1495,24 +1506,24 @@ Manage the animals that visit our veterinarian
     'data': [
         'security/ir.model.access.csv',
 
-        # Vistas base
+        # === Reportes (deben cargarse ANTES de las vistas que referencian sus acciones) ===
+        'report/sterilization_report.xml',
+        'report/visit_report.xml',          # <-- acción + plantilla PDF de Visitas
+
+        # === Vistas base ===
         'views/animals_views.xml',
         'views/medicines_views.xml',
         'views/allergies_views.xml',
         'views/surgeries_views.xml',
         'views/vaccines_views.xml',
         'views/insurances_views.xml',
-        'views/visits_views.xml',
+        'views/visits_views.xml',           # <-- ahora viene DESPUÉS del reporte
         'views/species_views.xml',
         'views/breeds_views.xml',
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
 
-        # Reportes
-        'report/sterilization_report.xml',
-        'report/visit_report.xml',          # <-- NUEVO: acción + plantilla PDF de Visitas
-
-        # IMPORTANTE: Definir la acción de Esterilizaciones ANTES del menú que la usa
+        # IMPORTANTE: acción de Esterilizaciones ya está arriba; aquí la vista que la usa
         'views/sterilizations_views.xml',
 
         # Menús (usa acciones ya definidas arriba)
@@ -1529,7 +1540,7 @@ Manage the animals that visit our veterinarian
     ],
     "images": ['static/images/banner.png', 'static/description/icon.png'],
     'installable': True,
-    'application': True,  # Esto indica que tu módulo es una aplicación.
+    'application': True,
     'auto_install': False,
 }
 
