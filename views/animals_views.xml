@@ -165,8 +165,45 @@
                 <field name="medicines" />
               </page>
 
+              <!-- ======== VACUNAS (MODIFICADO) ======== -->
               <page string="Vacunas">
-                <field name="vaccines" />
+                <!--
+                  Reemplazamos el campo Many2many 'vaccines' por un One2many
+                  'vaccination_ids', donde se registran los detalles:
+                  fecha, vía, doctor y próxima vacunación.
+                -->
+                <field name="vaccination_ids" context="{'default_animal_id': active_id}">
+                  <tree editable="bottom">
+                    <field name="vaccine_id"/>
+                    <field name="date"/>
+                    <field name="route"/>
+                    <field name="doctor" string="Dr/Dra"/>
+                    <field name="next_date"/>
+                    <field name="notes"/>
+                  </tree>
+                  <form>
+                    <group string="Vacunación">
+                      <group>
+                        <field name="vaccine_id"/>
+                        <field name="date"/>
+                      </group>
+                      <group>
+                        <field name="route"/>
+                        <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional"/>
+                      </group>
+                      <group>
+                        <field name="next_date"/>
+                        <field name="owner_id" readonly="1"/>
+                      </group>
+                      <field name="notes" placeholder="Observaciones adicionales..."/>
+                    </group>
+                  </form>
+                </field>
+
+                <!-- Opcional (solo lectura): listado de vacunas aplicadas (únicas) -->
+                <group string="Resumen de vacunas aplicadas (solo lectura)">
+                  <field name="vaccines" widget="many2many_tags" options="{'no_create': True, 'no_create_edit': True, 'no_open': True}" readonly="1"/>
+                </group>
               </page>
 
               <page string="Alergias">

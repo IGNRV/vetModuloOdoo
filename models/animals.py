@@ -34,7 +34,25 @@ class Animal(models.Model):
         ('large', 'Grande'),
     ], string="Tamaño", default='small')
     medicines = fields.Many2many("animal.medicine", string="Medicamentos", relation="animal_medicine_rel")
-    vaccines = fields.Many2many("animal.vaccine", string="Vacunas", relation="animal_vaccine_rel")
+
+    # Antes: relación simple Many2many sin detalles.
+    # Ahora: mantenemos 'vaccines' como campo calculado (solo lectura) para
+    # mostrar el listado de vacunas únicas aplicadas, basado en 'vaccination_ids'.
+    vaccines = fields.Many2many(
+        "animal.vaccine",
+        string="Vacunas",
+        relation="animal_vaccine_rel",
+        compute="_compute_vaccines",
+        store=True,
+        readonly=True,
+    )
+    # NUEVO: líneas de vacunación con detalles
+    vaccination_ids = fields.One2many(
+        "animal.vaccination",
+        "animal_id",
+        string="Vacunaciones"
+    )
+
     diseases = fields.Many2many("animal.disease", string="Enfermedades", relation="animal_disease_rel")
     allergies = fields.Many2many("animal.allergy", string="Alergias", relation="animal_allergy_rel")
     surgeries = fields.Many2many("animal.surgery", string="Cirugías", relation="animal_surgery_rel")
@@ -60,6 +78,12 @@ class Animal(models.Model):
         if vals.get('identification', 'Nuevo') == 'Nuevo':
             vals['identification'] = self.env['ir.sequence'].next_by_code('animal.identification') or 'Nuevo'
         return super(Animal, self).create(vals)
+
+    @api.depends('vaccination_ids.vaccine_id')
+    def _compute_vaccines(self):
+        for record in self:
+            vaccine_ids = record.vaccination_ids.mapped('vaccine_id').ids if record.vaccination_ids else []
+            record.vaccines = [(6, 0, vaccine_ids)]
 
     @api.depends('owner')
     def _compute_quote_count(self):
