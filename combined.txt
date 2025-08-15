@@ -11,6 +11,82 @@ class Vaccine(models.Model):
     description = fields.Text(string="Descripción")
 
 
+class Vaccination(models.Model):
+    _name = "animal.vaccination"
+    _description = "Registro de vacunación por animal"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = "date desc, id desc"
+
+    # Enlaces
+    animal_id = fields.Many2one(
+        "animal",
+        string="Animal",
+        required=True,
+        ondelete="cascade",
+        index=True,
+        tracking=True,
+    )
+    vaccine_id = fields.Many2one(
+        "animal.vaccine",
+        string="Vacuna",
+        required=True,
+        ondelete="restrict",
+        tracking=True,
+    )
+
+    # Datos de la aplicación
+    date = fields.Date(string="Fecha de vacunación", required=True, tracking=True)
+    route = fields.Selection([
+        ('sc', 'Subcutánea'),
+        ('im', 'Intramuscular'),
+        ('iv', 'Intravenosa'),
+        ('oral', 'Oral'),
+        ('intranasal', 'Intranasal'),
+        ('topical', 'Tópica'),
+        ('other', 'Otra'),
+    ], string="Vía de administración", tracking=True)
+    doctor = fields.Char(string="Dr/Dra (aplicó)", tracking=True)
+    next_date = fields.Date(string="Próxima vacunación", tracking=True)
+    notes = fields.Text(string="Notas/Observaciones")
+
+    # Auxiliares de lectura
+    owner_id = fields.Many2one(
+        related="animal_id.owner",
+        string="Dueño",
+        store=True,
+        readonly=True
+    )
+    specie_id = fields.Many2one(
+        related="animal_id.species",
+        string="Especie",
+        store=True,
+        readonly=True
+    )
+
+    @api.onchange('animal_id')
+    def _onchange_animal_id_prefill_doctor(self):
+        """Si el animal tiene 'médico tratante', proponerlo como doctor."""
+        for rec in self:
+            if rec.animal_id and rec.animal_id.treating_doctor and not rec.doctor:
+                rec.doctor = rec.animal_id.treating_doctor
+
+    def name_get(self):
+        res = []
+        for rec in self:
+            label = "%s" % (rec.vaccine_id.name if rec.vaccine_id else "Vacuna")
+            if rec.date:
+                label += " - %s" % fields.Date.to_string(rec.date)
+            res.append((rec.id, label))
+        return res
+
+    _sql_constraints = [
+        # Evitar duplicados exactos (mismo animal, misma vacuna, misma fecha)
+        ('unique_animal_vaccine_date',
+         'unique(animal_id, vaccine_id, date)',
+         'Ya existe un registro de esta vacuna para el animal en la misma fecha.')
+    ]
+
+
 === ./models/tag.py ===
 from odoo import models, fields, api
 
@@ -322,7 +398,25 @@ class Animal(models.Model):
         ('large', 'Grande'),
     ], string="Tamaño", default='small')
     medicines = fields.Many2many("animal.medicine", string="Medicamentos", relation="animal_medicine_rel")
-    vaccines = fields.Many2many("animal.vaccine", string="Vacunas", relation="animal_vaccine_rel")
+
+    # Antes: relación simple Many2many sin detalles.
+    # Ahora: mantenemos 'vaccines' como campo calculado (solo lectura) para
+    # mostrar el listado de vacunas únicas aplicadas, basado en 'vaccination_ids'.
+    vaccines = fields.Many2many(
+        "animal.vaccine",
+        string="Vacunas",
+        relation="animal_vaccine_rel",
+        compute="_compute_vaccines",
+        store=True,
+        readonly=True,
+    )
+    # NUEVO: líneas de vacunación con detalles
+    vaccination_ids = fields.One2many(
+        "animal.vaccination",
+        "animal_id",
+        string="Vacunaciones"
+    )
+
     diseases = fields.Many2many("animal.disease", string="Enfermedades", relation="animal_disease_rel")
     allergies = fields.Many2many("animal.allergy", string="Alergias", relation="animal_allergy_rel")
     surgeries = fields.Many2many("animal.surgery", string="Cirugías", relation="animal_surgery_rel")
@@ -348,6 +442,12 @@ class Animal(models.Model):
         if vals.get('identification', 'Nuevo') == 'Nuevo':
             vals['identification'] = self.env['ir.sequence'].next_by_code('animal.identification') or 'Nuevo'
         return super(Animal, self).create(vals)
+
+    @api.depends('vaccination_ids.vaccine_id')
+    def _compute_vaccines(self):
+        for record in self:
+            vaccine_ids = record.vaccination_ids.mapped('vaccine_id').ids if record.vaccination_ids else []
+            record.vaccines = [(6, 0, vaccine_ids)]
 
     @api.depends('owner')
     def _compute_quote_count(self):
@@ -427,6 +527,7 @@ class Animal(models.Model):
                 'default_partner_id': self.owner.id,  # Prellenar el cliente con el dueño del animal
             },
         }
+
 
 === ./models/exam_orders.py ===
 from odoo import models, fields, api
@@ -1835,6 +1936,7 @@ access_animal_visit,animal.visit,model_animal_visit,base.group_user,1,1,1,1
 access_animal_breed,animal.breed,model_animal_breed,base.group_user,1,1,1,1
 access_animal_sterilization,animal.sterilization,model_animal_sterilization,base.group_user,1,1,1,1
 access_animal_exam_order,animal.exam.order,model_animal_exam_order,base.group_user,1,1,1,1
+access_animal_vaccination,animal.vaccination,model_animal_vaccination,base.group_user,1,1,1,1
 
 
 === ./controllers/__init__.py ===
@@ -2086,8 +2188,45 @@ from . import controllers
                 <field name="medicines" />
               </page>
 
+              <!-- ======== VACUNAS (MODIFICADO) ======== -->
               <page string="Vacunas">
-                <field name="vaccines" />
+                <!--
+                  Reemplazamos el campo Many2many 'vaccines' por un One2many
+                  'vaccination_ids', donde se registran los detalles:
+                  fecha, vía, doctor y próxima vacunación.
+                -->
+                <field name="vaccination_ids" context="{'default_animal_id': active_id}">
+                  <tree editable="bottom">
+                    <field name="vaccine_id"/>
+                    <field name="date"/>
+                    <field name="route"/>
+                    <field name="doctor" string="Dr/Dra"/>
+                    <field name="next_date"/>
+                    <field name="notes"/>
+                  </tree>
+                  <form>
+                    <group string="Vacunación">
+                      <group>
+                        <field name="vaccine_id"/>
+                        <field name="date"/>
+                      </group>
+                      <group>
+                        <field name="route"/>
+                        <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional"/>
+                      </group>
+                      <group>
+                        <field name="next_date"/>
+                        <field name="owner_id" readonly="1"/>
+                      </group>
+                      <field name="notes" placeholder="Observaciones adicionales..."/>
+                    </group>
+                  </form>
+                </field>
+
+                <!-- Opcional (solo lectura): listado de vacunas aplicadas (únicas) -->
+                <group string="Resumen de vacunas aplicadas (solo lectura)">
+                  <field name="vaccines" widget="many2many_tags" options="{'no_create': True, 'no_create_edit': True, 'no_open': True}" readonly="1"/>
+                </group>
               </page>
 
               <page string="Alergias">
@@ -2188,6 +2327,7 @@ from . import controllers
 
   </data>
 </odoo>
+
 
 === ./views/surgeries_views.xml ===
 <odoo>

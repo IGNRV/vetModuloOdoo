@@ -24,7 +24,9 @@ Manage the animals that visit our veterinarian
         # === Reportes ===
         'report/sterilization_report.xml',
         'report/visit_report.xml',
-        'report/exam_order_report.xml',   # <--- NUEVO (debe ir antes de la vista que usa su acción)
+        'report/exam_order_report.xml',
+        # === NUEVO: Reporte PDF de Vacunación ===
+        'report/vaccination_report.xml',
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -38,14 +40,17 @@ Manage the animals that visit our veterinarian
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
 
-        # Vistas de Seguros (FALTABA) -> Debe ir antes de los menús
+        # Vistas de Seguros
         'views/insurances_views.xml',
 
         # Vistas de Esterilizaciones
         'views/sterilizations_views.xml',
 
-        # Vistas de Órdenes de Exámenes (nuevo)
+        # Vistas de Órdenes de Exámenes
         'views/exam_orders_views.xml',
+
+        # === NUEVO: Vistas de REGISTROS de Vacunación ===
+        'views/vaccinations_views.xml',
 
         # Menús
         'views/animals_menus.xml',
@@ -53,7 +58,7 @@ Manage the animals that visit our veterinarian
         # Secuencias/otros
         'views/visit_sequence.xml',
         'views/animals_identification.xml',
-        'views/exam_order_sequence.xml',  # nuevo
+        'views/exam_order_sequence.xml',
     ],
 
     # only loaded in demonstration mode
@@ -65,7 +70,7 @@ Manage the animals that visit our veterinarian
         "static/description/icon.png",
         "static/src/img/visita_header.png",
         "static/src/img/visita_divider.png",
-        "static/src/img/sterilizacion_header.png"  # <-- añadida para empaquetado
+        "static/src/img/sterilizacion_header.png"
     ],
     'installable': True,
     'application': True,

@@ -52,6 +52,15 @@
             parent="menu_medical_management"
             action="vaccine_action"
         />
+
+        <!-- *** NUEVO: Menú independiente para REGISTROS de vacunación *** -->
+        <menuitem
+            id="menu_vaccinations_list"
+            name="Registros de Vacunación"
+            parent="menu_medical_management"
+            action="vaccination_action"
+        />
+
         <menuitem
             id="menu_allergies_list"
             name="Alergias"

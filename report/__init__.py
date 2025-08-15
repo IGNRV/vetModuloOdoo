@@ -2,3 +2,4 @@
 from . import report_sterilization
 from . import report_visit
 from . import report_exam_order
+from . import report_vaccination
