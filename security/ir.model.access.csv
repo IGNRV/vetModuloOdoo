@@ -15,3 +15,4 @@ access_animal_exam_order,animal.exam.order,model_animal_exam_order,base.group_us
 access_animal_vaccination,animal.vaccination,model_animal_vaccination,base.group_user,1,1,1,1
 access_animal_dewormer,animal.dewormer,model_animal_dewormer,base.group_user,1,1,1,1
 access_animal_deworming,animal.deworming,model_animal_deworming,base.group_user,1,1,1,1
+access_animal_consent,animal.consent,model_animal_consent,base.group_user,1,1,1,1

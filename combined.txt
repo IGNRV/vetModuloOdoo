@@ -99,6 +99,94 @@ class Tag(models.Model):
     color = fields.Integer(string="Color")
 
 
+=== ./models/dewormings.py ===
+from odoo import models, fields, api
+
+
+class Dewormer(models.Model):
+    _name = "animal.dewormer"
+    _description = "Catálogo de desparasitantes (antiparasitarios)"
+
+    name = fields.Char(string="Desparasitante", required=True)
+    description = fields.Text(string="Descripción")
+
+
+class Deworming(models.Model):
+    _name = "animal.deworming"
+    _description = "Registro de desparasitación por animal"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = "date desc, id desc"
+
+    # Enlaces
+    animal_id = fields.Many2one(
+        "animal",
+        string="Animal",
+        required=True,
+        ondelete="cascade",
+        index=True,
+        tracking=True,
+    )
+    dewormer_id = fields.Many2one(
+        "animal.dewormer",
+        string="Desparasitante",
+        required=True,
+        ondelete="restrict",
+        tracking=True,
+    )
+
+    # Datos de la aplicación
+    date = fields.Date(string="Fecha de desparasitación", required=True, tracking=True)
+    route = fields.Selection([
+        ('sc', 'Subcutánea'),
+        ('im', 'Intramuscular'),
+        ('iv', 'Intravenosa'),
+        ('oral', 'Oral'),
+        ('intranasal', 'Intranasal'),
+        ('topical', 'Tópica'),
+        ('other', 'Otra'),
+    ], string="Vía de administración", tracking=True)
+    doctor = fields.Char(string="Dr/Dra (aplicó)", tracking=True)
+    next_date = fields.Date(string="Próxima desparasitación", tracking=True)
+    notes = fields.Text(string="Notas/Observaciones")
+
+    # Auxiliares de lectura
+    owner_id = fields.Many2one(
+        related="animal_id.owner",
+        string="Dueño",
+        store=True,
+        readonly=True
+    )
+    specie_id = fields.Many2one(
+        related="animal_id.species",
+        string="Especie",
+        store=True,
+        readonly=True
+    )
+
+    @api.onchange('animal_id')
+    def _onchange_animal_id_prefill_doctor(self):
+        """Si el animal tiene 'médico tratante', proponerlo como doctor."""
+        for rec in self:
+            if rec.animal_id and rec.animal_id.treating_doctor and not rec.doctor:
+                rec.doctor = rec.animal_id.treating_doctor
+
+    def name_get(self):
+        res = []
+        for rec in self:
+            label = "%s" % (rec.dewormer_id.name if rec.dewormer_id else "Desparasitación")
+            if rec.date:
+                label += " - %s" % fields.Date.to_string(rec.date)
+            res.append((rec.id, label))
+        return res
+
+    _sql_constraints = [
+        # Evitar duplicados exactos (mismo animal, mismo desparasitante, misma fecha)
+        ('unique_animal_dewormer_date',
+         'unique(animal_id, dewormer_id, date)',
+         'Ya existe un registro de esta desparasitación para el animal en la misma fecha.')
+    ]
+
+
 === ./models/species.py ===
 from odoo import models, fields, api 
 
@@ -126,7 +214,7 @@ class Breed(models.Model):
 === ./models/__init__.py ===
 # -*- coding: utf-8 -*-
 
-from . import animals, allergies, diseases, insurances, medicines, species, surgeries, tag, vaccines, visits, breeds, partner_pet, exam_orders
+from . import animals, allergies, diseases, insurances, medicines, species, surgeries, tag, vaccines, dewormings, visits, breeds, partner_pet, exam_orders
 from . import sterilizations
 
 
@@ -417,6 +505,21 @@ class Animal(models.Model):
         string="Vacunaciones"
     )
 
+    # ===== NUEVO BLOQUE: Desparasitaciones =====
+    dewormers = fields.Many2many(
+        "animal.dewormer",
+        string="Desparasitantes",
+        relation="animal_dewormer_rel",
+        compute="_compute_dewormers",
+        store=True,
+        readonly=True,
+    )
+    deworming_ids = fields.One2many(
+        "animal.deworming",
+        "animal_id",
+        string="Desparasitaciones"
+    )
+
     diseases = fields.Many2many("animal.disease", string="Enfermedades", relation="animal_disease_rel")
     allergies = fields.Many2many("animal.allergy", string="Alergias", relation="animal_allergy_rel")
     surgeries = fields.Many2many("animal.surgery", string="Cirugías", relation="animal_surgery_rel")
@@ -448,6 +551,12 @@ class Animal(models.Model):
         for record in self:
             vaccine_ids = record.vaccination_ids.mapped('vaccine_id').ids if record.vaccination_ids else []
             record.vaccines = [(6, 0, vaccine_ids)]
+
+    @api.depends('deworming_ids.dewormer_id')
+    def _compute_dewormers(self):
+        for record in self:
+            dewormer_ids = record.deworming_ids.mapped('dewormer_id').ids if record.deworming_ids else []
+            record.dewormers = [(6, 0, dewormer_ids)]
 
     @api.depends('owner')
     def _compute_quote_count(self):
@@ -527,7 +636,6 @@ class Animal(models.Model):
                 'default_partner_id': self.owner.id,  # Prellenar el cliente con el dueño del animal
             },
         }
-
 
 === ./models/exam_orders.py ===
 from odoo import models, fields, api
@@ -2118,6 +2226,10 @@ Manage the animals that visit our veterinarian
         # === NUEVO: Vistas de REGISTROS de Vacunación ===
         'views/vaccinations_views.xml',
 
+        # === NUEVO: Catálogo y REGISTROS de Desparasitación ===
+        'views/dewormers_views.xml',
+        'views/dewormings_views.xml',
+
         # Menús
         'views/animals_menus.xml',
 
@@ -2192,7 +2304,8 @@ access_animal_breed,animal.breed,model_animal_breed,base.group_user,1,1,1,1
 access_animal_sterilization,animal.sterilization,model_animal_sterilization,base.group_user,1,1,1,1
 access_animal_exam_order,animal.exam.order,model_animal_exam_order,base.group_user,1,1,1,1
 access_animal_vaccination,animal.vaccination,model_animal_vaccination,base.group_user,1,1,1,1
-
+access_animal_dewormer,animal.dewormer,model_animal_dewormer,base.group_user,1,1,1,1
+access_animal_deworming,animal.deworming,model_animal_deworming,base.group_user,1,1,1,1
 
 === ./controllers/__init__.py ===
 # -*- coding: utf-8 -*-
@@ -2484,6 +2597,41 @@ from . import controllers
                 </group>
               </page>
 
+              <!-- ======== DESPARASITACIONES (NUEVA PESTAÑA) ======== -->
+              <page string="Desparasitaciones">
+                <field name="deworming_ids" context="{'default_animal_id': active_id}">
+                  <tree editable="bottom">
+                    <field name="dewormer_id" string="Desparasitante"/>
+                    <field name="date" string="Fecha"/>
+                    <field name="route" string="Vía"/>
+                    <field name="doctor" string="Dr/Dra"/>
+                    <field name="next_date" string="Próxima desparasitación"/>
+                    <field name="notes" string="Notas"/>
+                  </tree>
+                  <form>
+                    <group string="Desparasitación">
+                      <group>
+                        <field name="dewormer_id" string="Desparasitante"/>
+                        <field name="date" string="Fecha"/>
+                      </group>
+                      <group>
+                        <field name="route" string="Vía de administración"/>
+                        <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional"/>
+                      </group>
+                      <group>
+                        <field name="next_date" string="Próxima desparasitación"/>
+                        <field name="owner_id" readonly="1"/>
+                      </group>
+                      <field name="notes" placeholder="Observaciones adicionales..."/>
+                    </group>
+                  </form>
+                </field>
+
+                <group string="Resumen de desparasitaciones (solo lectura)">
+                  <field name="dewormers" widget="many2many_tags" options="{'no_create': True, 'no_create_edit': True, 'no_open': True}" readonly="1"/>
+                </group>
+              </page>
+
               <page string="Alergias">
                 <field name="allergies" />
               </page>
@@ -2583,7 +2731,6 @@ from . import controllers
   </data>
 </odoo>
 
-
 === ./views/surgeries_views.xml ===
 <odoo>
     <data>
@@ -2608,7 +2755,6 @@ from . import controllers
         </record>
     </data>
 </odoo>
-
 
 === ./views/animals_menus.xml ===
 <?xml version="1.0" encoding="utf-8"?>
@@ -2666,7 +2812,23 @@ from . import controllers
             action="vaccine_action"
         />
 
-        <!-- *** NUEVO: Menú independiente para REGISTROS de vacunación *** -->
+        <!-- *** NUEVO: Catálogo de Desparasitantes *** -->
+        <menuitem
+            id="menu_dewormers_list"
+            name="Desparasitantes"
+            parent="menu_medical_management"
+            action="dewormer_action"
+        />
+
+        <!-- *** NUEVO: Menú independiente para REGISTROS de desparasitación *** -->
+        <menuitem
+            id="menu_dewormings_list"
+            name="Registros de Desparasitaciones"
+            parent="menu_medical_management"
+            action="deworming_action"
+        />
+
+        <!-- *** EXISTENTE: REGISTROS de vacunación *** -->
         <menuitem
             id="menu_vaccinations_list"
             name="Registros de Vacunación"
@@ -2743,6 +2905,7 @@ from . import controllers
         />
     </data>
 </odoo>
+
 
 === ./views/exam_orders_views.xml ===
 <?xml version="1.0" encoding="utf-8"?>
@@ -3238,6 +3401,19 @@ from . import controllers
 </odoo>
 
 
+=== ./views/dewormers_views.xml ===
+<odoo>
+    <data>
+
+        <record id="dewormer_action" model="ir.actions.act_window">
+            <field name="name">Desparasitantes</field>
+            <field name="res_model">animal.dewormer</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+    </data>
+</odoo>
+
 === ./views/sterilizations_views.xml ===
 <odoo>
   <data>
@@ -3456,6 +3632,103 @@ from . import controllers
     </data>
 </odoo>
 
+
+=== ./views/dewormings_views.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- ===== Search ===== -->
+    <record id="deworming_search_view" model="ir.ui.view">
+      <field name="name">animal.deworming.search.view</field>
+      <field name="model">animal.deworming</field>
+      <field name="arch" type="xml">
+        <search string="Buscar registros de desparasitación">
+          <field name="animal_id" string="Animal"/>
+          <field name="owner_id" string="Dueño"/>
+          <field name="specie_id" string="Especie"/>
+          <field name="dewormer_id" string="Desparasitante"/>
+          <field name="date" string="Fecha desparasitación"/>
+          <field name="next_date" string="Próxima desparasitación"/>
+          <field name="route" string="Vía"/>
+          <field name="doctor" string="Dr/Dra"/>
+          <field name="notes" string="Notas/Observaciones"/>
+
+          <group expand="0" string="Agrupar por">
+            <filter name="grp_animal" string="Animal" context="{'group_by':'animal_id'}"/>
+            <filter name="grp_owner" string="Dueño" context="{'group_by':'owner_id'}"/>
+            <filter name="grp_specie" string="Especie" context="{'group_by':'specie_id'}"/>
+            <filter name="grp_dewormer" string="Desparasitante" context="{'group_by':'dewormer_id'}"/>
+            <filter name="grp_route" string="Vía" context="{'group_by':'route'}"/>
+            <filter name="grp_doctor" string="Dr/Dra" context="{'group_by':'doctor'}"/>
+            <filter name="grp_date" string="Fecha (mes)" context="{'group_by':'date:month'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- ===== Tree ===== -->
+    <record id="deworming_tree_view" model="ir.ui.view">
+      <field name="name">animal.deworming.tree.view</field>
+      <field name="model">animal.deworming</field>
+      <field name="arch" type="xml">
+        <tree string="Registros de Desparasitaciones">
+          <field name="date" string="Fecha"/>
+          <field name="animal_id" string="Animal"/>
+          <field name="owner_id" string="Dueño"/>
+          <field name="specie_id" string="Especie"/>
+          <field name="dewormer_id" string="Desparasitante"/>
+          <field name="route" string="Vía"/>
+          <field name="doctor" string="Dr/Dra"/>
+          <field name="next_date" string="Próx. desparasitación"/>
+          <field name="notes" string="Notas"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- ===== Form ===== -->
+    <record id="deworming_form_view" model="ir.ui.view">
+      <field name="name">animal.deworming.form.view</field>
+      <field name="model">animal.deworming</field>
+      <field name="arch" type="xml">
+        <form string="Registro de Desparasitación">
+          <sheet>
+            <group>
+              <group string="Datos del Animal">
+                <field name="animal_id" required="1"/>
+                <field name="owner_id" readonly="1"/>
+                <field name="specie_id" readonly="1"/>
+              </group>
+              <group string="Desparasitación">
+                <field name="dewormer_id" required="1"/>
+                <field name="date" required="1"/>
+                <field name="route"/>
+                <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional"/>
+                <field name="next_date" string="Próxima desparasitación"/>
+              </group>
+            </group>
+            <group>
+              <field name="notes" placeholder="Notas u observaciones clínicas..."/>
+            </group>
+          </sheet>
+
+          <div class="oe_chatter">
+            <field widget="mail_thread" name="message_ids"/>
+            <field widget="mail_activity" name="activity_ids"/>
+          </div>
+        </form>
+      </field>
+    </record>
+
+    <!-- ===== Action (listado independiente) ===== -->
+    <record id="deworming_action" model="ir.actions.act_window">
+      <field name="name">Registros de Desparasitaciones</field>
+      <field name="res_model">animal.deworming</field>
+      <field name="view_mode">search,tree,form,kanban</field>
+    </record>
+
+  </data>
+</odoo>
 
 === ./views/animals_identification.xml ===
 <odoo>

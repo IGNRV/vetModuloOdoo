@@ -25,8 +25,10 @@ Manage the animals that visit our veterinarian
         'report/sterilization_report.xml',
         'report/visit_report.xml',
         'report/exam_order_report.xml',
-        # === NUEVO: Reporte PDF de Vacunación ===
+        # === EXISTENTE: Reporte PDF de Vacunación ===
         'report/vaccination_report.xml',
+        # === NUEVO: Reporte PDF de Consentimientos ===
+        'report/consent_report.xml',
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -49,12 +51,15 @@ Manage the animals that visit our veterinarian
         # Vistas de Órdenes de Exámenes
         'views/exam_orders_views.xml',
 
-        # === NUEVO: Vistas de REGISTROS de Vacunación ===
+        # === EXISTENTE: Vistas de REGISTROS de Vacunación ===
         'views/vaccinations_views.xml',
 
-        # === NUEVO: Catálogo y REGISTROS de Desparasitación ===
+        # === EXISTENTE: Catálogo y REGISTROS de Desparasitación ===
         'views/dewormers_views.xml',
         'views/dewormings_views.xml',
+
+        # === NUEVO: Consentimientos ===
+        'views/consents_views.xml',
 
         # Menús
         'views/animals_menus.xml',
@@ -63,6 +68,8 @@ Manage the animals that visit our veterinarian
         'views/visit_sequence.xml',
         'views/animals_identification.xml',
         'views/exam_order_sequence.xml',
+        # === NUEVO: Secuencia de Consentimientos ===
+        'views/consent_sequence.xml',
     ],
 
     # only loaded in demonstration mode

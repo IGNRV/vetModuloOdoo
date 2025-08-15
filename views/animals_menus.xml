@@ -77,6 +77,14 @@
             action="vaccination_action"
         />
 
+        <!-- *** NUEVO: CONSENTIMIENTOS *** -->
+        <menuitem
+            id="menu_consents_list"
+            name="Consentimientos"
+            parent="menu_medical_management"
+            action="consent_action"
+        />
+
         <menuitem
             id="menu_allergies_list"
             name="Alergias"
