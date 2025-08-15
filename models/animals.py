@@ -53,6 +53,21 @@ class Animal(models.Model):
         string="Vacunaciones"
     )
 
+    # ===== NUEVO BLOQUE: Desparasitaciones =====
+    dewormers = fields.Many2many(
+        "animal.dewormer",
+        string="Desparasitantes",
+        relation="animal_dewormer_rel",
+        compute="_compute_dewormers",
+        store=True,
+        readonly=True,
+    )
+    deworming_ids = fields.One2many(
+        "animal.deworming",
+        "animal_id",
+        string="Desparasitaciones"
+    )
+
     diseases = fields.Many2many("animal.disease", string="Enfermedades", relation="animal_disease_rel")
     allergies = fields.Many2many("animal.allergy", string="Alergias", relation="animal_allergy_rel")
     surgeries = fields.Many2many("animal.surgery", string="Cirugías", relation="animal_surgery_rel")
@@ -84,6 +99,12 @@ class Animal(models.Model):
         for record in self:
             vaccine_ids = record.vaccination_ids.mapped('vaccine_id').ids if record.vaccination_ids else []
             record.vaccines = [(6, 0, vaccine_ids)]
+
+    @api.depends('deworming_ids.dewormer_id')
+    def _compute_dewormers(self):
+        for record in self:
+            dewormer_ids = record.deworming_ids.mapped('dewormer_id').ids if record.deworming_ids else []
+            record.dewormers = [(6, 0, dewormer_ids)]
 
     @api.depends('owner')
     def _compute_quote_count(self):

@@ -52,6 +52,10 @@ Manage the animals that visit our veterinarian
         # === NUEVO: Vistas de REGISTROS de Vacunación ===
         'views/vaccinations_views.xml',
 
+        # === NUEVO: Catálogo y REGISTROS de Desparasitación ===
+        'views/dewormers_views.xml',
+        'views/dewormings_views.xml',
+
         # Menús
         'views/animals_menus.xml',
 

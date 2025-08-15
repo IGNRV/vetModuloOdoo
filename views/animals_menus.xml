@@ -53,7 +53,23 @@
             action="vaccine_action"
         />
 
-        <!-- *** NUEVO: Menú independiente para REGISTROS de vacunación *** -->
+        <!-- *** NUEVO: Catálogo de Desparasitantes *** -->
+        <menuitem
+            id="menu_dewormers_list"
+            name="Desparasitantes"
+            parent="menu_medical_management"
+            action="dewormer_action"
+        />
+
+        <!-- *** NUEVO: Menú independiente para REGISTROS de desparasitación *** -->
+        <menuitem
+            id="menu_dewormings_list"
+            name="Registros de Desparasitaciones"
+            parent="menu_medical_management"
+            action="deworming_action"
+        />
+
+        <!-- *** EXISTENTE: REGISTROS de vacunación *** -->
         <menuitem
             id="menu_vaccinations_list"
             name="Registros de Vacunación"

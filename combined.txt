@@ -815,7 +815,7 @@ class ReportSterilization(models.AbstractModel):
 from . import report_sterilization
 from . import report_visit
 from . import report_exam_order
-
+from . import report_vaccination
 
 === ./report/visit_report.xml ===
 <odoo>
@@ -1120,6 +1120,36 @@ from . import report_exam_order
 
   </data>
 </odoo>
+
+=== ./report/report_vaccination.py ===
+# -*- coding: utf-8 -*-
+from odoo import models
+from odoo.tools import file_open
+import base64
+
+
+class ReportVaccination(models.AbstractModel):
+    _name = 'report.vet.report_vaccination'
+    _description = 'Report Vaccination (PDF)'
+
+    def _get_report_values(self, docids, data=None):
+        docs = self.env['animal.vaccination'].browse(docids)
+
+        header_b64 = False
+        # Reutilizamos el header de "visita" si existe en el módulo
+        try:
+            with file_open('vet/static/src/img/visita_header.png', 'rb') as f:
+                header_b64 = base64.b64encode(f.read()).decode('utf-8')
+        except Exception:
+            header_b64 = False
+
+        return {
+            'doc_ids': docs.ids,
+            'doc_model': 'animal.vaccination',
+            'docs': docs,
+            'vacc_header_image': header_b64,
+        }
+
 
 === ./report/sterilization_report.xml ===
 <?xml version="1.0" encoding="utf-8"?>
@@ -1812,6 +1842,227 @@ class ReportVisit(models.AbstractModel):
         }
 
 
+=== ./report/vaccination_report.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- ===== Paperformat SIN header reservado (Odoo 17) ===== -->
+    <record id="paperformat_vaccination_noheader" model="report.paperformat">
+      <field name="name">Vaccination PDF (no header)</field>
+      <field name="format">A4</field>
+      <field name="orientation">Portrait</field>
+      <field name="margin_top">6</field>
+      <field name="margin_bottom">8</field>
+      <field name="margin_left">10</field>
+      <field name="margin_right">10</field>
+      <field name="header_line">False</field>
+      <field name="header_spacing">0</field>
+    </record>
+
+    <!-- ===== Acción de reporte PDF ===== -->
+    <record id="action_report_vaccination" model="ir.actions.report">
+      <field name="name">Registro de Vacunación</field>
+      <field name="model">animal.vaccination</field>
+      <field name="report_type">qweb-pdf</field>
+      <field name="report_name">vet.report_vaccination</field>
+      <field name="report_file">vet.report_vaccination</field>
+      <field name="paperformat_id" ref="vet.paperformat_vaccination_noheader"/>
+      <field name="print_report_name">
+        (object.animal_id and object.animal_id.name or 'Vacunación') + ' - ' + (object.vaccine_id and object.vaccine_id.name or 'Vacuna') + ' - Registro.pdf'
+      </field>
+    </record>
+
+    <!-- ===== Contenedor por registro ===== -->
+    <template id="report_vaccination">
+      <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="doc">
+          <t t-call="vet.report_vaccination_document"/>
+          <div class="pagebreak"/>
+        </t>
+      </t>
+    </template>
+
+    <!-- ===== Documento ===== -->
+    <template id="report_vaccination_document">
+      <t t-set="o" t-value="doc"/>
+      <t t-call="web.external_layout">
+        <style type="text/css">
+          .vac * { font-size: 12px; font-family: "DejaVu Sans", sans-serif; }
+          .vac .title { font-size: 18px; font-weight: 700; text-align:center; }
+          .vac .subtitle { font-size: 12px; text-align:center; }
+          .vac table { width: 100%; border-collapse: collapse; }
+          .vac th, .vac td { border: 0; padding: 4px 6px; vertical-align: top; }
+          .vac .section { font-weight: 700; text-align:center; border: 1px solid #000; background: #f3f3f3; }
+          .vac .boxed { border: 1px solid #000; }
+          .vac .label { width: 22%; white-space: nowrap; }
+          .vac .val { width: 28%; border-bottom: 1px solid #000; }
+          .vac .val2 { border-bottom: 1px solid #000; }
+          .vac .muted { color:#666; }
+          .vac .header-strip { margin-bottom: 4px; }
+          .vac .header-image { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+          .vac .header-date { text-align: right; margin: 2px 0 6px; }
+          .vac .small { font-size: 11px; }
+
+          /* ===== Ocultar pie y header estándar SOLO en este reporte ===== */
+          .footer,
+          .o_footer,
+          .o_report_layout_standard .footer,
+          .o_report_layout_boxed .footer,
+          .o_report_layout_bold .footer,
+          .header,
+          .o_header,
+          .o_report_layout_standard .header,
+          .o_report_layout_boxed .header,
+          .o_report_layout_bold .header {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+          }
+          .footer * { border: 0 !important; }
+        </style>
+
+        <div class="vac">
+
+          <!-- Cabecera con imagen -->
+          <div class="header-strip">
+            <img class="header-image"
+                 t-if="vacc_header_image"
+                 t-att-src="'data:image/png;base64,%s' % (vacc_header_image)"
+                 alt="Encabezado"/>
+          </div>
+
+          <div class="title" style="margin:6px 0;">
+            REGISTRO DE VACUNACIÓN
+          </div>
+
+          <!-- Información del propietario -->
+          <table class="boxed" style="margin-top:6px;">
+            <tr>
+              <th class="section" colspan="4">Información del propietario</th>
+            </tr>
+            <tr>
+              <td class="label">Nombre completo :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.name or '')"/>
+              </td>
+              <td class="label">RUT :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.vat or '')"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Teléfono :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.phone or o.owner_id.mobile or '')"/>
+              </td>
+              <td class="label">Correo :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.email or '')"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Dirección :</td>
+              <td class="val" colspan="3">
+                <t t-esc="o.owner_id and (o.owner_id.street or '')"/>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Información del paciente -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr>
+              <th class="section" colspan="6">Información del paciente</th>
+            </tr>
+            <tr>
+              <td class="label">Nombre:</td>
+              <td class="val">
+                <t t-esc="o.animal_id and (o.animal_id.name or '')"/>
+              </td>
+              <td class="label">Especie (C/F):</td>
+              <td class="val">
+                <t t-esc="o.specie_id and o.specie_id.name or ''"/>
+              </td>
+              <td class="label">N° de Microchip:</td>
+              <td class="val">
+                <t t-esc="o.animal_id and (o.animal_id.microchip_number or '')"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Sexo:</td>
+              <td class="val">
+                <t t-esc="({'male':'Masculino','female':'Femenino'}).get(o.animal_id.sex) if o.animal_id else ''"/>
+              </td>
+              <td class="label">Raza:</td>
+              <td class="val">
+                <t t-esc="o.animal_id and o.animal_id.breed and o.animal_id.breed.name or ''"/>
+              </td>
+              <td class="label">Color:</td>
+              <td class="val">
+                <t t-if="o.animal_id and o.animal_id.tags">
+                  <t t-foreach="o.animal_id.tags" t-as="c">
+                    <t t-esc="c.name"/><t t-if="c != o.animal_id.tags[-1]">, </t>
+                  </t>
+                </t>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Detalle de la vacunación -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr>
+              <th class="section" colspan="4">Detalle de la vacunación</th>
+            </tr>
+            <tr>
+              <td class="label">Vacuna:</td>
+              <td class="val">
+                <t t-esc="o.vaccine_id and o.vaccine_id.name or ''"/>
+              </td>
+              <td class="label">Fecha de vacunación:</td>
+              <td class="val">
+                <span t-field="o.date" t-options='{"widget": "date"}'/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Vía de administración:</td>
+              <td class="val">
+                <t t-esc="dict(o._fields['route'].selection).get(o.route) if o.route else ''"/>
+              </td>
+              <td class="label">Próxima vacunación:</td>
+              <td class="val">
+                <span t-field="o.next_date" t-options='{"widget": "date"}'/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Profesional (Dr/Dra):</td>
+              <td class="val" colspan="3">
+                <t t-esc="o.doctor or ''"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label" colspan="4">Notas / Observaciones:</td>
+            </tr>
+            <tr>
+              <td class="val2" colspan="4" style="height: 84px;">
+                <t t-esc="o.notes or ''"/>
+              </td>
+            </tr>
+          </table>
+
+          <div class="small muted" style="margin-top:6px;">
+            Paciente: <t t-esc="o.animal_id and o.animal_id.name or ''"/>
+            — Dueño: <t t-esc="o.owner_id and o.owner_id.name or ''"/>
+          </div>
+        </div>
+      </t>
+    </template>
+
+  </data>
+</odoo>
+
 === ./__manifest__.py ===
 # -*- coding: utf-8 -*-
 {
@@ -1839,7 +2090,9 @@ Manage the animals that visit our veterinarian
         # === Reportes ===
         'report/sterilization_report.xml',
         'report/visit_report.xml',
-        'report/exam_order_report.xml',   # <--- NUEVO (debe ir antes de la vista que usa su acción)
+        'report/exam_order_report.xml',
+        # === NUEVO: Reporte PDF de Vacunación ===
+        'report/vaccination_report.xml',
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -1853,14 +2106,17 @@ Manage the animals that visit our veterinarian
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
 
-        # Vistas de Seguros (FALTABA) -> Debe ir antes de los menús
+        # Vistas de Seguros
         'views/insurances_views.xml',
 
         # Vistas de Esterilizaciones
         'views/sterilizations_views.xml',
 
-        # Vistas de Órdenes de Exámenes (nuevo)
+        # Vistas de Órdenes de Exámenes
         'views/exam_orders_views.xml',
+
+        # === NUEVO: Vistas de REGISTROS de Vacunación ===
+        'views/vaccinations_views.xml',
 
         # Menús
         'views/animals_menus.xml',
@@ -1868,7 +2124,7 @@ Manage the animals that visit our veterinarian
         # Secuencias/otros
         'views/visit_sequence.xml',
         'views/animals_identification.xml',
-        'views/exam_order_sequence.xml',  # nuevo
+        'views/exam_order_sequence.xml',
     ],
 
     # only loaded in demonstration mode
@@ -1880,13 +2136,12 @@ Manage the animals that visit our veterinarian
         "static/description/icon.png",
         "static/src/img/visita_header.png",
         "static/src/img/visita_divider.png",
-        "static/src/img/sterilizacion_header.png"  # <-- añadida para empaquetado
+        "static/src/img/sterilizacion_header.png"
     ],
     'installable': True,
     'application': True,
     'auto_install': False,
 }
-
 
 === ./demo/demo.xml ===
 <odoo>
@@ -2410,6 +2665,15 @@ from . import controllers
             parent="menu_medical_management"
             action="vaccine_action"
         />
+
+        <!-- *** NUEVO: Menú independiente para REGISTROS de vacunación *** -->
+        <menuitem
+            id="menu_vaccinations_list"
+            name="Registros de Vacunación"
+            parent="menu_medical_management"
+            action="vaccination_action"
+        />
+
         <menuitem
             id="menu_allergies_list"
             name="Alergias"
@@ -2479,7 +2743,6 @@ from . import controllers
         />
     </data>
 </odoo>
-
 
 === ./views/exam_orders_views.xml ===
 <?xml version="1.0" encoding="utf-8"?>
@@ -2639,6 +2902,111 @@ from . import controllers
     </data>
 </odoo>
 
+
+=== ./views/vaccinations_views.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- ===== Search ===== -->
+    <record id="vaccination_search_view" model="ir.ui.view">
+      <field name="name">animal.vaccination.search.view</field>
+      <field name="model">animal.vaccination</field>
+      <field name="arch" type="xml">
+        <search string="Buscar registros de vacunación">
+          <field name="animal_id" string="Animal"/>
+          <field name="owner_id" string="Dueño"/>
+          <field name="specie_id" string="Especie"/>
+          <field name="vaccine_id" string="Vacuna"/>
+          <field name="date" string="Fecha vacunación"/>
+          <field name="next_date" string="Próxima vacunación"/>
+          <field name="route" string="Vía"/>
+          <field name="doctor" string="Dr/Dra"/>
+          <field name="notes" string="Notas/Observaciones"/>
+
+          <group expand="0" string="Agrupar por">
+            <filter name="grp_animal" string="Animal" context="{'group_by':'animal_id'}"/>
+            <filter name="grp_owner" string="Dueño" context="{'group_by':'owner_id'}"/>
+            <filter name="grp_specie" string="Especie" context="{'group_by':'specie_id'}"/>
+            <filter name="grp_vaccine" string="Vacuna" context="{'group_by':'vaccine_id'}"/>
+            <filter name="grp_route" string="Vía" context="{'group_by':'route'}"/>
+            <filter name="grp_doctor" string="Dr/Dra" context="{'group_by':'doctor'}"/>
+            <filter name="grp_date" string="Fecha (mes)" context="{'group_by':'date:month'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- ===== Tree ===== -->
+    <record id="vaccination_tree_view" model="ir.ui.view">
+      <field name="name">animal.vaccination.tree.view</field>
+      <field name="model">animal.vaccination</field>
+      <field name="arch" type="xml">
+        <tree string="Registros de Vacunación">
+          <field name="date" string="Fecha"/>
+          <field name="animal_id" string="Animal"/>
+          <field name="owner_id" string="Dueño"/>
+          <field name="specie_id" string="Especie"/>
+          <field name="vaccine_id" string="Vacuna"/>
+          <field name="route" string="Vía"/>
+          <field name="doctor" string="Dr/Dra"/>
+          <field name="next_date" string="Próx. vacunación"/>
+          <field name="notes" string="Notas"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- ===== Form ===== -->
+    <record id="vaccination_form_view" model="ir.ui.view">
+      <field name="name">animal.vaccination.form.view</field>
+      <field name="model">animal.vaccination</field>
+      <field name="arch" type="xml">
+        <form string="Registro de Vacunación">
+          <header>
+            <!-- Botón para descargar el PDF del registro -->
+            <button name="%(action_report_vaccination)d"
+                    type="action"
+                    class="btn-primary"
+                    string="Descargar PDF"/>
+          </header>
+
+          <sheet>
+            <group>
+              <group string="Datos del Animal">
+                <field name="animal_id" required="1"/>
+                <field name="owner_id" readonly="1"/>
+                <field name="specie_id" readonly="1"/>
+              </group>
+              <group string="Vacunación">
+                <field name="vaccine_id" required="1"/>
+                <field name="date" required="1"/>
+                <field name="route"/>
+                <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional"/>
+                <field name="next_date" string="Próxima vacunación"/>
+              </group>
+            </group>
+            <group>
+              <field name="notes" placeholder="Notas u observaciones clínicas..."/>
+            </group>
+          </sheet>
+
+          <div class="oe_chatter">
+            <field widget="mail_thread" name="message_ids"/>
+            <field widget="mail_activity" name="activity_ids"/>
+          </div>
+        </form>
+      </field>
+    </record>
+
+    <!-- ===== Action (listado independiente) ===== -->
+    <record id="vaccination_action" model="ir.actions.act_window">
+      <field name="name">Registros de Vacunación</field>
+      <field name="res_model">animal.vaccination</field>
+      <field name="view_mode">search,tree,form,kanban</field>
+    </record>
+
+  </data>
+</odoo>
 
 === ./views/visit_sequence.xml ===
 <odoo>
