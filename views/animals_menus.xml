@@ -4,6 +4,49 @@
         <!-- Menú raíz -->
         <menuitem id="menu_animals" name="Vet" sequence="5"/>
 
+        <!-- === NUEVO CONTENEDOR: Gestión de Sala de Espera === -->
+        <menuitem
+            id="menu_waiting_room"
+            name="Gestión de Sala de Espera"
+            parent="menu_animals"
+            sequence="2"
+        />
+        <menuitem
+            id="menu_waiting_room_tickets"
+            name="Tickets"
+            parent="menu_waiting_room"
+            action="waiting_ticket_action"
+            sequence="1"
+        />
+        <menuitem
+            id="menu_waiting_room_waiting"
+            name="En espera"
+            parent="menu_waiting_room"
+            action="waiting_ticket_waiting_action"
+            sequence="2"
+        />
+        <menuitem
+            id="menu_waiting_room_in_consultation"
+            name="En consulta"
+            parent="menu_waiting_room"
+            action="waiting_ticket_in_consultation_action"
+            sequence="3"
+        />
+        <menuitem
+            id="menu_waiting_room_done"
+            name="Atendidos"
+            parent="menu_waiting_room"
+            action="waiting_ticket_done_action"
+            sequence="4"
+        />
+        <menuitem
+            id="menu_waiting_room_cancelled"
+            name="Cancelados"
+            parent="menu_waiting_room"
+            action="waiting_ticket_cancelled_action"
+            sequence="5"
+        />
+
         <!-- Listado de animales -->
         <menuitem
             id="menu_animals_list"
@@ -19,7 +62,7 @@
             name="Visitas"
             parent="menu_animals"
             action="visit_action"
-            sequence="2"
+            sequence="3"
         />
 
         <!-- Esterilizaciones -->
@@ -28,7 +71,7 @@
             name="Esterilizaciones"
             parent="menu_animals"
             action="sterilization_action"
-            sequence="3"
+            sequence="4"
         />
 
         <!-- Contenedor: Gestión Médica (se puede dejar sin action si prefieres que sea solo contenedor) -->
@@ -37,7 +80,7 @@
             name="Gestión Médica"
             parent="menu_animals"
             action="animals_action"
-            sequence="4"
+            sequence="5"
         />
 
         <menuitem
@@ -128,7 +171,7 @@
             name="Configuration"
             parent="menu_animals"
             action="animals_action"
-            sequence="5"
+            sequence="6"
         />
 
         <menuitem

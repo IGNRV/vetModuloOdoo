@@ -61,6 +61,10 @@ Manage the animals that visit our veterinarian
         # === NUEVO: Consentimientos ===
         'views/consents_views.xml',
 
+        # === NUEVO: Sala de Espera ===
+        'views/waiting_room_sequence.xml',
+        'views/waiting_room_views.xml',
+
         # Menús
         'views/animals_menus.xml',
 
