@@ -216,7 +216,7 @@ class Breed(models.Model):
 
 from . import animals, allergies, diseases, insurances, medicines, species, surgeries, tag, vaccines, dewormings, visits, breeds, partner_pet, exam_orders
 from . import sterilizations
-
+from . import consents
 
 === ./models/diseases.py ===
 from odoo import models, fields, api
@@ -637,6 +637,134 @@ class Animal(models.Model):
             },
         }
 
+=== ./models/consents.py ===
+from odoo import models, fields, api
+
+
+class Consent(models.Model):
+    _name = "animal.consent"
+    _description = "Consentimientos informados"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = "date desc, sequence desc"
+
+    # Identificador / referencia
+    sequence = fields.Char(
+        string="Referencia",
+        required=True,
+        copy=False,
+        readonly=True,
+        index=True,
+        default=lambda self: 'Nuevo',
+        tracking=True
+    )
+
+    # Enlaces
+    animal_id = fields.Many2one(
+        'animal',
+        string='Animal',
+        required=True,
+        tracking=True,
+    )
+    owner_id = fields.Many2one(
+        related='animal_id.owner',
+        string="Dueño",
+        store=True,
+        readonly=True
+    )
+
+    # Datos del paciente (solo lectura para filtros/listados e impresión)
+    specie_id = fields.Many2one(
+        related='animal_id.species',
+        string='Especie',
+        store=True,
+        readonly=True
+    )
+    breed_id = fields.Many2one(
+        related='animal_id.breed',
+        string='Raza',
+        store=True,
+        readonly=True
+    )
+    sex = fields.Selection(
+        related='animal_id.sex',
+        string='Sexo',
+        store=True,
+        readonly=True
+    )
+    microchip_number = fields.Char(
+        related='animal_id.microchip_number',
+        string="N° de microchip",
+        store=True,
+        readonly=True
+    )
+
+    # Datos del consentimiento
+    date = fields.Datetime(
+        string="Fecha",
+        required=True,
+        default=fields.Datetime.now,
+        tracking=True,
+    )
+    consent_type = fields.Selection([
+        ('anesthesia', 'Anestesia / Sedación'),
+        ('surgery', 'Cirugía / Procedimiento Quirúrgico'),
+        ('procedure', 'Procedimiento / Examen'),
+        ('hospitalization', 'Hospitalización'),
+        ('euthanasia', 'Eutanasia'),
+        ('treatment', 'Tratamiento'),
+        ('other', 'Otro'),
+    ], string="Tipo de consentimiento", tracking=True)
+
+    consent_title = fields.Char(string="Título (impresión)", help="Título que saldrá en el PDF (opcional). Si lo dejas vacío, se usará el tipo de consentimiento.")
+    description = fields.Text(string="Descripción del procedimiento / motivo")
+    risks = fields.Text(string="Riesgos y posibles complicaciones")
+    post_instructions = fields.Text(string="Instrucciones postprocedimiento")
+
+    # Firmas y datos de participantes
+    doctor_name = fields.Char(string="Nombre M. Veterinario/a")
+    doctor_rut = fields.Char(string="RUT (médico)")
+    doctor_signature = fields.Binary(string="Firma Médico/a")
+    owner_signature = fields.Binary(string="Firma Propietario/a")
+
+    # Estado del consentimiento
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('signed', 'Firmado'),
+        ('cancelled', 'Cancelado'),
+    ], string="Estado", default='draft', tracking=True)
+
+    # Auxiliares
+    notes = fields.Text(string="Notas internas")
+
+    @api.model
+    def create(self, vals):
+        if vals.get('sequence', 'Nuevo') == 'Nuevo':
+            vals['sequence'] = self.env['ir.sequence'].next_by_code('animal.consent.sequence') or 'Nuevo'
+        return super(Consent, self).create(vals)
+
+    @api.onchange('animal_id')
+    def _onchange_animal_id_set_doctor(self):
+        """
+        Si el animal tiene 'médico tratante', sugerirlo como doctor_name.
+        """
+        for rec in self:
+            if rec.animal_id and rec.animal_id.treating_doctor and not rec.doctor_name:
+                rec.doctor_name = rec.animal_id.treating_doctor
+
+    # Acciones de estado
+    def action_confirm(self):
+        self.write({'state': 'signed'})
+        return True
+
+    def action_cancel(self):
+        self.write({'state': 'cancelled'})
+        return True
+
+    def action_reset_to_draft(self):
+        self.write({'state': 'draft'})
+        return True
+
+
 === ./models/exam_orders.py ===
 from odoo import models, fields, api
 
@@ -880,6 +1008,263 @@ class ReportExamOrder(models.AbstractModel):
         }
 
 
+=== ./report/consent_report.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- Paperformat SIN header reservado (Odoo 17) -->
+    <record id="paperformat_consent_noheader" model="report.paperformat">
+      <field name="name">Consent PDF (no header)</field>
+      <field name="format">A4</field>
+      <field name="orientation">Portrait</field>
+      <field name="margin_top">6</field>
+      <field name="margin_bottom">8</field>
+      <field name="margin_left">10</field>
+      <field name="margin_right">10</field>
+      <field name="header_line">False</field>
+      <field name="header_spacing">0</field>
+    </record>
+
+    <!-- Acción de reporte PDF -->
+    <record id="action_report_consent" model="ir.actions.report">
+      <field name="name">Consentimiento Informado</field>
+      <field name="model">animal.consent</field>
+      <field name="report_type">qweb-pdf</field>
+      <field name="report_name">vet.report_consent</field>
+      <field name="report_file">vet.report_consent</field>
+      <field name="paperformat_id" ref="vet.paperformat_consent_noheader"/>
+      <field name="print_report_name">
+        (object.sequence or 'Consentimiento') + ' - ' + (dict(object._fields['consent_type'].selection).get(object.consent_type) if object.consent_type else (object.consent_title or 'Documento')) + '.pdf'
+      </field>
+    </record>
+
+    <!-- Contenedor por registro -->
+    <template id="report_consent">
+      <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="doc">
+          <t t-call="vet.report_consent_document"/>
+          <div class="pagebreak"/>
+        </t>
+      </t>
+    </template>
+
+    <!-- Documento -->
+    <template id="report_consent_document">
+      <t t-set="o" t-value="doc"/>
+      <t t-call="web.external_layout">
+        <style type="text/css">
+          .cst * { font-size: 12px; font-family: "DejaVu Sans", sans-serif; }
+          .cst .title { font-size: 18px; font-weight: 700; text-align:center; }
+          .cst .subtitle { font-size: 12px; text-align:center; }
+          .cst table { width: 100%; border-collapse: collapse; }
+          .cst th, .cst td { border: 0; padding: 4px 6px; vertical-align: top; }
+          .cst .section { font-weight: 700; text-align:center; border: 1px solid #000; background: #f3f3f3; }
+          .cst .boxed { border: 1px solid #000; }
+          .cst .label { width: 22%; white-space: nowrap; }
+          .cst .val { width: 28%; border-bottom: 1px solid #000; }
+          .cst .val2 { border-bottom: 1px solid #000; }
+          .cst .muted { color:#666; }
+          .cst .header-strip { margin-bottom: 4px; }
+          .cst .header-image { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+          .cst .header-date { text-align: right; margin: 2px 0 6px; }
+          .cst .small { font-size: 11px; }
+
+          /* Firmas: columnas sin bordes */
+          .cst .signrow { display: table; width: 100%; margin-top: 28px; }
+          .cst .signcol { display: table-cell; width: 50%; padding: 0 6px; vertical-align: top; }
+          .cst .signbox { text-align: center; padding-top: 90px; min-height: 130px; }
+          .cst .sigline { border-top: 1px solid #000; margin: 0 10% 6px; }
+          .cst .siglabel { font-size: 12px; }
+
+          /* Ocultar pie y header estándar SOLO en este reporte */
+          .footer,
+          .o_footer,
+          .o_report_layout_standard .footer,
+          .o_report_layout_boxed .footer,
+          .o_report_layout_bold .footer,
+          .header,
+          .o_header,
+          .o_report_layout_standard .header,
+          .o_report_layout_boxed .header,
+          .o_report_layout_bold .header {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+          }
+          .footer * { border: 0 !important; }
+        </style>
+
+        <div class="cst">
+
+          <!-- Cabecera con imagen -->
+          <div class="header-strip">
+            <img class="header-image"
+                 t-if="consent_header_image"
+                 t-att-src="'data:image/png;base64,%s' % (consent_header_image)"
+                 alt="Encabezado"/>
+          </div>
+
+          <!-- Fecha + Título -->
+          <div class="header-date">
+            Fecha:
+            <span class="val2">
+              <span t-field="o.date" t-options='{"widget": "date"}'/>
+            </span>
+          </div>
+
+          <div class="title" style="margin:6px 0;">
+            <t t-esc="o.consent_title or (dict(o._fields['consent_type'].selection).get(o.consent_type) if o.consent_type else 'CONSENTIMIENTO INFORMADO')"/>
+          </div>
+
+          <!-- Información del propietario -->
+          <table class="boxed" style="margin-top:6px;">
+            <tr>
+              <th class="section" colspan="4">Información del propietario</th>
+            </tr>
+            <tr>
+              <td class="label">Nombre completo :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.name or '')"/>
+              </td>
+              <td class="label">RUT :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.vat or '')"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Teléfono :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.phone or o.owner_id.mobile or '')"/>
+              </td>
+              <td class="label">Correo :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.email or '')"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Dirección :</td>
+              <td class="val" colspan="3">
+                <t t-esc="o.owner_id and (o.owner_id.street or '')"/>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Información del paciente -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr>
+              <th class="section" colspan="6">Información del paciente</th>
+            </tr>
+            <tr>
+              <td class="label">Nombre:</td>
+              <td class="val">
+                <t t-esc="o.animal_id and (o.animal_id.name or '')"/>
+              </td>
+              <td class="label">Especie (C/F):</td>
+              <td class="val">
+                <t t-esc="o.specie_id and o.specie_id.name or ''"/>
+              </td>
+              <td class="label">N° de Microchip:</td>
+              <td class="val">
+                <t t-esc="o.microchip_number or ''"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Sexo:</td>
+              <td class="val">
+                <t t-esc="({'male':'Masculino','female':'Femenino'}).get(o.sex) if o.sex else ''"/>
+              </td>
+              <td class="label">Raza:</td>
+              <td class="val">
+                <t t-esc="o.breed_id and o.breed_id.name or ''"/>
+              </td>
+              <td class="label"></td>
+              <td class="val"></td>
+            </tr>
+          </table>
+
+          <!-- Descripción del procedimiento -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section">Descripción del procedimiento / motivo</th></tr>
+            <tr>
+              <td class="val2" style="height: 110px;">
+                <t t-esc="o.description or ''"/>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Riesgos -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section">Riesgos y posibles complicaciones</th></tr>
+            <tr>
+              <td class="val2" style="height: 110px;">
+                <t t-esc="o.risks or ''"/>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Instrucciones Postprocedimiento -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section">Instrucciones postprocedimiento</th></tr>
+            <tr>
+              <td class="val2" style="height: 84px;">
+                <t t-esc="o.post_instructions or ''"/>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Datos del profesional -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr>
+              <th class="section" colspan="4">Profesional responsable</th>
+            </tr>
+            <tr>
+              <td class="label">Nombre M. Veterinario/a:</td>
+              <td class="val">
+                <t t-esc="o.doctor_name or ''"/>
+              </td>
+              <td class="label">RUT:</td>
+              <td class="val">
+                <t t-esc="o.doctor_rut or ''"/>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Firmas (propietario y médico) -->
+          <div class="signrow">
+            <div class="signcol">
+              <div class="signbox">
+                <div t-if="o.owner_signature" class="center">
+                  <img t-att-src="image_data_uri(o.owner_signature)" style="max-height:90px;"/>
+                </div>
+                <div class="sigline"></div>
+                <div class="siglabel">FIRMA PROPIETARIO/A</div>
+              </div>
+            </div>
+            <div class="signcol">
+              <div class="signbox">
+                <div t-if="o.doctor_signature" class="center">
+                  <img t-att-src="image_data_uri(o.doctor_signature)" style="max-height:90px;"/>
+                </div>
+                <div class="sigline"></div>
+                <div class="siglabel">FIRMA MÉDICO VETERINARIO</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="small muted" style="margin-top:6px;">
+            Ref.: <t t-esc="o.sequence or ''"/> — Paciente: <t t-esc="o.animal_id and o.animal_id.name or ''"/>
+          </div>
+        </div>
+      </t>
+    </template>
+
+  </data>
+</odoo>
+
 === ./report/report_sterilization.py ===
 # -*- coding: utf-8 -*-
 from odoo import models
@@ -924,6 +1309,7 @@ from . import report_sterilization
 from . import report_visit
 from . import report_exam_order
 from . import report_vaccination
+from . import report_consent
 
 === ./report/visit_report.xml ===
 <odoo>
@@ -1912,6 +2298,35 @@ class ReportVaccination(models.AbstractModel):
   </data>
 </odoo>
 
+=== ./report/report_consent.py ===
+# -*- coding: utf-8 -*-
+from odoo import models
+from odoo.tools import file_open
+import base64
+
+
+class ReportConsent(models.AbstractModel):
+    _name = 'report.vet.report_consent'
+    _description = 'Report Consent (PDF)'
+
+    def _get_report_values(self, docids, data=None):
+        docs = self.env['animal.consent'].browse(docids)
+
+        header_b64 = False
+        # Reutilizamos el header de "visita" si existe en el módulo
+        try:
+            with file_open('vet/static/src/img/visita_header.png', 'rb') as f:
+                header_b64 = base64.b64encode(f.read()).decode('utf-8')
+        except Exception:
+            header_b64 = False
+
+        return {
+            'doc_ids': docs.ids,
+            'doc_model': 'animal.consent',
+            'docs': docs,
+            'consent_header_image': header_b64,
+        }
+
 === ./report/report_visit.py ===
 # -*- coding: utf-8 -*-
 from odoo import models
@@ -2199,8 +2614,10 @@ Manage the animals that visit our veterinarian
         'report/sterilization_report.xml',
         'report/visit_report.xml',
         'report/exam_order_report.xml',
-        # === NUEVO: Reporte PDF de Vacunación ===
+        # === EXISTENTE: Reporte PDF de Vacunación ===
         'report/vaccination_report.xml',
+        # === NUEVO: Reporte PDF de Consentimientos ===
+        'report/consent_report.xml',
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -2223,12 +2640,15 @@ Manage the animals that visit our veterinarian
         # Vistas de Órdenes de Exámenes
         'views/exam_orders_views.xml',
 
-        # === NUEVO: Vistas de REGISTROS de Vacunación ===
+        # === EXISTENTE: Vistas de REGISTROS de Vacunación ===
         'views/vaccinations_views.xml',
 
-        # === NUEVO: Catálogo y REGISTROS de Desparasitación ===
+        # === EXISTENTE: Catálogo y REGISTROS de Desparasitación ===
         'views/dewormers_views.xml',
         'views/dewormings_views.xml',
+
+        # === NUEVO: Consentimientos ===
+        'views/consents_views.xml',
 
         # Menús
         'views/animals_menus.xml',
@@ -2237,6 +2657,8 @@ Manage the animals that visit our veterinarian
         'views/visit_sequence.xml',
         'views/animals_identification.xml',
         'views/exam_order_sequence.xml',
+        # === NUEVO: Secuencia de Consentimientos ===
+        'views/consent_sequence.xml',
     ],
 
     # only loaded in demonstration mode
@@ -2306,6 +2728,7 @@ access_animal_exam_order,animal.exam.order,model_animal_exam_order,base.group_us
 access_animal_vaccination,animal.vaccination,model_animal_vaccination,base.group_user,1,1,1,1
 access_animal_dewormer,animal.dewormer,model_animal_dewormer,base.group_user,1,1,1,1
 access_animal_deworming,animal.deworming,model_animal_deworming,base.group_user,1,1,1,1
+access_animal_consent,animal.consent,model_animal_consent,base.group_user,1,1,1,1
 
 === ./controllers/__init__.py ===
 # -*- coding: utf-8 -*-
@@ -2836,6 +3259,14 @@ from . import controllers
             action="vaccination_action"
         />
 
+        <!-- *** NUEVO: CONSENTIMIENTOS *** -->
+        <menuitem
+            id="menu_consents_list"
+            name="Consentimientos"
+            parent="menu_medical_management"
+            action="consent_action"
+        />
+
         <menuitem
             id="menu_allergies_list"
             name="Alergias"
@@ -2905,7 +3336,6 @@ from . import controllers
         />
     </data>
 </odoo>
-
 
 === ./views/exam_orders_views.xml ===
 <?xml version="1.0" encoding="utf-8"?>
@@ -3398,6 +3828,154 @@ from . import controllers
             <field name="view_mode">tree,form</field>
         </record>
     </data>
+</odoo>
+
+
+=== ./views/consents_views.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- Search -->
+    <record id="consent_search_view" model="ir.ui.view">
+      <field name="name">animal.consent.search.view</field>
+      <field name="model">animal.consent</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="sequence" string="Referencia"/>
+          <field name="animal_id" string="Animal"/>
+          <field name="owner_id" string="Dueño"/>
+          <field name="date" string="Fecha"/>
+          <field name="consent_type" string="Tipo"/>
+          <field name="state" string="Estado"/>
+          <field name="doctor_name" string="Médico/a"/>
+
+          <group expand="0" string="Agrupar por">
+            <filter name="grp_animal" string="Animal" context="{'group_by':'animal_id'}"/>
+            <filter name="grp_owner" string="Dueño" context="{'group_by':'owner_id'}"/>
+            <filter name="grp_type" string="Tipo" context="{'group_by':'consent_type'}"/>
+            <filter name="grp_state" string="Estado" context="{'group_by':'state'}"/>
+            <filter name="grp_doctor" string="Médico/a" context="{'group_by':'doctor_name'}"/>
+            <filter name="grp_date" string="Fecha" context="{'group_by':'date:month'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- Tree -->
+    <record id="consent_tree_view" model="ir.ui.view">
+      <field name="name">animal.consent.tree.view</field>
+      <field name="model">animal.consent</field>
+      <field name="arch" type="xml">
+        <tree string="Consentimientos">
+          <field name="sequence" string="Ref."/>
+          <field name="date"/>
+          <field name="animal_id"/>
+          <field name="owner_id" string="Dueño"/>
+          <field name="consent_type" string="Tipo"/>
+          <field name="state" string="Estado"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- Form -->
+    <record id="consent_form_view" model="ir.ui.view">
+      <field name="name">animal.consent.form.view</field>
+      <field name="model">animal.consent</field>
+      <field name="arch" type="xml">
+        <form string="Consentimiento">
+          <header>
+            <button name="action_confirm" type="object" class="btn-primary" string="Marcar como Firmado"
+                    invisible="state != 'draft'"/>
+            <button name="action_cancel" type="object" string="Cancelar"
+                    invisible="not (state in ('draft','signed'))"/>
+            <button name="action_reset_to_draft" type="object" string="Restablecer a Borrador"
+                    invisible="not (state in ('signed','cancelled'))"/>
+
+            <!-- Descarga de PDF -->
+            <button name="%(action_report_consent)d"
+                    type="action"
+                    class="btn-secondary"
+                    string="Descargar PDF"/>
+
+            <field name="state" widget="statusbar" statusbar_visible="draft,signed,cancelled"/>
+          </header>
+
+          <sheet>
+            <!-- Título: Referencia -->
+            <group>
+              <field class="fs-1" name="sequence"/>
+            </group>
+
+            <group>
+              <!-- Datos generales -->
+              <group string="Datos">
+                <group>
+                  <field name="animal_id" required="1"/>
+                </group>
+                <group>
+                  <field name="owner_id" readonly="1"/>
+                </group>
+                <group col="4">
+                  <field name="date" colspan="2"/>
+                  <field name="consent_type" colspan="2"/>
+                </group>
+                <group>
+                  <field name="consent_title" placeholder="(Opcional) Título para el PDF"/>
+                </group>
+              </group>
+
+              <!-- Contenido -->
+              <group string="Contenido del consentimiento" colspan="2">
+                <group>
+                  <field name="description" placeholder="Describa el procedimiento o motivo..."/>
+                  <field name="risks" placeholder="Describa los riesgos y posibles complicaciones..."/>
+                </group>
+                <group>
+                  <field name="post_instructions" placeholder="Indique las instrucciones postprocedimiento..."/>
+                  <field name="notes" placeholder="Notas internas (no se imprimen en el PDF)"/>
+                </group>
+              </group>
+            </group>
+
+            <group string="Firmas y profesional" col="4">
+              <field name="doctor_name" string="Nombre M. Veterinario/a"/>
+              <field name="doctor_rut" string="RUT (médico)"/>
+              <field name="doctor_signature" widget="image" string="Firma Médico/a" colspan="2"/>
+              <field name="owner_signature" widget="image" string="Firma Propietario/a" colspan="2"/>
+            </group>
+          </sheet>
+
+          <div class="oe_chatter">
+            <field widget="mail_thread" name="message_ids"/>
+            <field widget="mail_activity" name="activity_ids"/>
+          </div>
+        </form>
+      </field>
+    </record>
+
+    <!-- Action -->
+    <record id="consent_action" model="ir.actions.act_window">
+      <field name="name">Consentimientos</field>
+      <field name="res_model">animal.consent</field>
+      <field name="view_mode">search,tree,form,kanban</field>
+    </record>
+
+  </data>
+</odoo>
+
+=== ./views/consent_sequence.xml ===
+<odoo>
+  <data noupdate="1">
+    <!-- Secuencia para Consentimientos -->
+    <record id="seq_animal_consent" model="ir.sequence">
+      <field name="name">Animal Consentimiento</field>
+      <field name="code">animal.consent.sequence</field>
+      <field name="prefix">CONS/</field>
+      <field name="padding">4</field>
+      <field name="number_increment">1</field>
+    </record>
+  </data>
 </odoo>
 
 

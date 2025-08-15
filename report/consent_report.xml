@@ -106,7 +106,8 @@
           </div>
 
           <div class="title" style="margin:6px 0;">
-            <t t-esc="o.consent_title or (dict(o._fields['consent_type'].selection).get(o.consent_type) if o.consent_type else 'CONSENTIMIENTO INFORMADO')"/>
+            <!-- Título requerido: 'Consentimiento ' + etiqueta del tipo seleccionado -->
+            <t t-esc="'Consentimiento ' + dict(o._fields['consent_type'].selection).get(o.consent_type) if o.consent_type else 'Consentimiento'"/>
           </div>
 
           <!-- Información del propietario -->
