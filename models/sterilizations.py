@@ -134,14 +134,62 @@ class Sterilization(models.Model):
     # ========= Utilidad / etiquetas =========
     notes = fields.Text(string="Notas")
 
-    # ====== Sugerencia: al elegir animal, precargar especie/raza si existen ======
+    # ====== Al elegir Animal, autocompletar DATOS PACIENTE (y sugerir Responsable) ======
     @api.onchange('animal_id')
     def _onchange_animal_id_fill_species_breed(self):
+        """
+        Autocompleta:
+          - patient_name         <- animal.name
+          - specie_id            <- animal.species
+          - breed_id             <- animal.breed (si coincide la especie)
+          - patient_birthdate    <- animal.birthdate
+          - sex                  <- mapea animal.sex (male/female) -> (macho/hembra)
+          - color                <- nombres de animal.tags unidos por coma (si existen)
+          - weight               <- animal.weight
+        Además sugiere:
+          - owner_id             <- animal.owner
+          - already_sterilized   <- True si animal.reproductive_status == 'neutered'
+        """
+        sex_map = {'male': 'macho', 'female': 'hembra'}
         for rec in self:
-            if rec.animal_id:
-                rec.specie_id = rec.animal_id.species.id or False
-                # si la raza del animal coincide con la especie, se sugiere
-                if rec.animal_id.breed and (not rec.specie_id or rec.animal_id.breed.specie.id == rec.specie_id.id):
-                    rec.breed_id = rec.animal_id.breed.id
-                else:
-                    rec.breed_id = False
+            if not rec.animal_id:
+                # Si se deselecciona el animal, no tocamos los campos existentes.
+                continue
+
+            animal = rec.animal_id
+
+            # Nombre del paciente
+            rec.patient_name = animal.name or False
+
+            # Especie del paciente
+            rec.specie_id = animal.species.id or False
+
+            # Raza: solo si coincide con la especie elegida
+            if animal.breed and (not rec.specie_id or animal.breed.specie.id == rec.specie_id.id):
+                rec.breed_id = animal.breed.id
+            else:
+                rec.breed_id = False
+
+            # Fecha de nacimiento
+            rec.patient_birthdate = animal.birthdate or False
+
+            # Sexo (mapeo)
+            rec.sex = sex_map.get(animal.sex, False)
+
+            # Color (unimos etiquetas por nombre si existen)
+            if animal.tags:
+                rec.color = ", ".join(animal.tags.mapped('name'))
+            else:
+                rec.color = False
+
+            # Peso
+            rec.weight = animal.weight or False
+
+            # Sugerir responsable desde el dueño del animal (si existe)
+            rec.owner_id = animal.owner.id if animal.owner else False
+
+            # Autocompletar si ya está esterilizado (desde estado reproductivo del animal)
+            if animal.reproductive_status:
+                rec.already_sterilized = (animal.reproductive_status == 'neutered')
+            else:
+                rec.already_sterilized = False

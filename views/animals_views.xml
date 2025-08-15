@@ -102,11 +102,20 @@
               <group>
                 <field name="owner" />
               </group>
+
+              <!-- Especie: Many2one a animal.specie, solo seleccionar registros existentes -->
               <group>
-                <field name="species" />
+                <field name="species"
+                       string="Especie"
+                       options="{'no_create': True, 'no_create_edit': True, 'no_open': True}"/>
               </group>
+
+              <!-- Raza: Many2one a animal.breed, filtrado por la especie seleccionada -->
               <group>
-                <field name="breed" />
+                <field name="breed"
+                       string="Raza"
+                       domain="[('specie', '=', species)]"
+                       options="{'no_create': True, 'no_create_edit': True, 'no_open': True}"/>
               </group>
 
               <!-- NUEVOS INPUTS AL LADO DE "Raza" -->
@@ -193,13 +202,7 @@
                   </group>
                 </group>
                 <group>
-                  <div class="d-flex">
-                    <group>
-                      <field name="height" string="Altura" />
-                    </group>
-                    <span>Mts.</span>
-                  </div>
-
+                  <!-- Eliminado el campo Altura y su unidad -->
                   <group>
                     <field name="tags" string="Color" widget="many2many_tags" options="{'color_field': 'color'}" />
                   </group>
