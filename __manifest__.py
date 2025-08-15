@@ -24,6 +24,7 @@ Manage the animals that visit our veterinarian
         # === Reportes ===
         'report/sterilization_report.xml',
         'report/visit_report.xml',
+        'report/exam_order_report.xml',   # <--- NUEVO (debe ir antes de la vista que usa su acción)
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -31,7 +32,6 @@ Manage the animals that visit our veterinarian
         'views/allergies_views.xml',
         'views/surgeries_views.xml',
         'views/vaccines_views.xml',
-        'views/insurances_views.xml',
         'views/visits_views.xml',
         'views/species_views.xml',
         'views/breeds_views.xml',
@@ -41,12 +41,16 @@ Manage the animals that visit our veterinarian
         # Vistas de Esterilizaciones
         'views/sterilizations_views.xml',
 
+        # Vistas de Órdenes de Exámenes (nuevo)
+        'views/exam_orders_views.xml',
+
         # Menús
         'views/animals_menus.xml',
 
         # Secuencias/otros
         'views/visit_sequence.xml',
         'views/animals_identification.xml',
+        'views/exam_order_sequence.xml',  # nuevo
     ],
 
     # only loaded in demonstration mode

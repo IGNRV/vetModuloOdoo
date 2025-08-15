@@ -50,7 +50,7 @@ class Breed(models.Model):
 === ./models/__init__.py ===
 # -*- coding: utf-8 -*-
 
-from . import animals, allergies, diseases, insurances, medicines, species, surgeries, tag, vaccines, visits, breeds, partner_pet
+from . import animals, allergies, diseases, insurances, medicines, species, surgeries, tag, vaccines, visits, breeds, partner_pet, exam_orders
 from . import sterilizations
 
 
@@ -428,6 +428,130 @@ class Animal(models.Model):
             },
         }
 
+=== ./models/exam_orders.py ===
+from odoo import models, fields, api
+
+
+class ExamOrder(models.Model):
+    _name = "animal.exam.order"
+    _description = "Órdenes de Exámenes"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = "date desc, sequence desc"
+
+    # Identificador / referencia
+    sequence = fields.Char(
+        string="Referencia",
+        required=True,
+        copy=False,
+        readonly=True,
+        index=True,
+        default=lambda self: 'Nuevo',
+        tracking=True
+    )
+
+    # Enlaces
+    animal_id = fields.Many2one(
+        'animal',
+        string='Animal',
+        required=True,
+        tracking=True,
+    )
+    owner_id = fields.Many2one(
+        related='animal_id.owner',
+        string="Dueño",
+        store=True,
+        readonly=True
+    )
+
+    # Datos del paciente (de solo lectura para filtros/listados)
+    specie = fields.Many2one(
+        related='animal_id.species',
+        string='Especie',
+        store=True,
+        readonly=True
+    )
+    breed = fields.Many2one(
+        related='animal_id.breed',
+        string='Raza',
+        store=True,
+        readonly=True
+    )
+    sex = fields.Selection(
+        related='animal_id.sex',
+        string='Sexo',
+        store=True,
+        readonly=True
+    )
+
+    # Datos de la orden
+    date = fields.Datetime(
+        string="Fecha",
+        required=True,
+        default=fields.Datetime.now,
+        tracking=True,
+    )
+    doctor = fields.Char(string="Dr/Dra")
+    exam_type = fields.Selection([
+        ('hemograma', 'Hemograma'),
+        ('perfil_bioquimico', 'Perfil bioquímico'),
+        ('orina', 'Orina (EGO)'),
+        ('coproparasitario', 'Coproparasitológico'),
+        ('radiografia', 'Radiografía'),
+        ('ecografia', 'Ecografía'),
+        ('citologia', 'Citología'),
+        ('biopsia', 'Biopsia'),
+        ('otro', 'Otro'),
+    ], string="Tipo de examen", tracking=True)
+    exam_type_other = fields.Char(string="Otro (especificar)")
+    priority = fields.Selection([
+        ('normal', 'Normal'),
+        ('alta', 'Alta'),
+        ('urgente', 'Urgente'),
+    ], string="Prioridad", default='normal', tracking=True)
+
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('ordered', 'Ordenado'),
+        ('done', 'Completado'),
+        ('cancelled', 'Cancelado'),
+    ], string="Estado", default='draft', tracking=True)
+
+    notes = fields.Text(string="Notas/Indicaciones")
+    results = fields.Text(string="Resultados")
+
+    # Adjuntos opcionales (además de los de chatter)
+    attachment_ids = fields.Many2many(
+        'ir.attachment',
+        'animal_exam_order_ir_attachments_rel',
+        'order_id',
+        'attachment_id',
+        string="Adjuntos"
+    )
+
+    @api.model
+    def create(self, vals):
+        if vals.get('sequence', 'Nuevo') == 'Nuevo':
+            vals['sequence'] = self.env['ir.sequence'].next_by_code('animal.exam.order.sequence') or 'Nuevo'
+        return super(ExamOrder, self).create(vals)
+
+    # Acciones de estado
+    def action_confirm(self):
+        self.write({'state': 'ordered'})
+        return True
+
+    def action_done(self):
+        self.write({'state': 'done'})
+        return True
+
+    def action_cancel(self):
+        self.write({'state': 'cancelled'})
+        return True
+
+    def action_reset_to_draft(self):
+        self.write({'state': 'draft'})
+        return True
+
+
 === ./models/visits.py ===
 from odoo import fields, models, api
 
@@ -508,9 +632,6 @@ class Allergy(models.Model):
 
     name = fields.Char(string="Alergia", required=True)
     description = fields.Text(string="Descripción")
-
-
-=== ./combined.tx ===
 
 
 === ./__init__.py ===
@@ -1362,12 +1483,16 @@ Manage the animals that visit our veterinarian
         # Vistas de Esterilizaciones
         'views/sterilizations_views.xml',
 
+        # Vistas de Órdenes de Exámenes (nuevo)
+        'views/exam_orders_views.xml',
+
         # Menús
         'views/animals_menus.xml',
 
         # Secuencias/otros
         'views/visit_sequence.xml',
         'views/animals_identification.xml',
+        'views/exam_order_sequence.xml',  # nuevo
     ],
 
     # only loaded in demonstration mode
@@ -1385,6 +1510,7 @@ Manage the animals that visit our veterinarian
     'application': True,
     'auto_install': False,
 }
+
 
 === ./demo/demo.xml ===
 <odoo>
@@ -1433,6 +1559,7 @@ access_animal_vaccine,animal.vaccine,model_animal_vaccine,base.group_user,1,1,1,
 access_animal_visit,animal.visit,model_animal_visit,base.group_user,1,1,1,1
 access_animal_breed,animal.breed,model_animal_breed,base.group_user,1,1,1,1
 access_animal_sterilization,animal.sterilization,model_animal_sterilization,base.group_user,1,1,1,1
+access_animal_exam_order,animal.exam.order,model_animal_exam_order,base.group_user,1,1,1,1
 
 
 === ./controllers/__init__.py ===
@@ -1843,6 +1970,9 @@ from . import controllers
         <menuitem id="menu_surgeries_list" name="Cirugías" parent="menu_medical_management"
             action="surgery_action" />
 
+        <!-- NUEVO SUBMENÚ: Órdenes de Exámenes -->
+        <menuitem id="menu_exam_orders_list" name="Órdenes de Exámenes" parent="menu_medical_management"
+            action="exam_order_action" />
 
         <menuitem id="menu_insurances_list" name="Seguros" parent="menu_medical_management"
             action="insurance_action" />
@@ -1861,6 +1991,131 @@ from . import controllers
 
     </data>
 </odoo>
+
+
+=== ./views/exam_orders_views.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- ===== Search ===== -->
+    <record id="exam_order_search_view" model="ir.ui.view">
+      <field name="name">animal.exam.order.search.view</field>
+      <field name="model">animal.exam.order</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="sequence" string="Referencia"/>
+          <field name="animal_id" string="Animal"/>
+          <field name="owner_id" string="Dueño"/>
+          <field name="date" string="Fecha"/>
+          <field name="exam_type" string="Tipo de examen"/>
+          <field name="priority" string="Prioridad"/>
+          <field name="state" string="Estado"/>
+          <field name="doctor" string="Dr/Dra"/>
+
+          <group expand="0" string="Agrupar por">
+            <filter name="grp_animal" string="Animal" context="{'group_by':'animal_id'}"/>
+            <filter name="grp_owner" string="Dueño" context="{'group_by':'owner_id'}"/>
+            <filter name="grp_exam_type" string="Tipo de examen" context="{'group_by':'exam_type'}"/>
+            <filter name="grp_priority" string="Prioridad" context="{'group_by':'priority'}"/>
+            <filter name="grp_state" string="Estado" context="{'group_by':'state'}"/>
+            <filter name="grp_date" string="Fecha" context="{'group_by':'date:month'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- ===== Tree ===== -->
+    <record id="exam_order_tree_view" model="ir.ui.view">
+      <field name="name">animal.exam.order.tree.view</field>
+      <field name="model">animal.exam.order</field>
+      <field name="arch" type="xml">
+        <tree string="Órdenes de Exámenes">
+          <field name="sequence" string="Ref."/>
+          <field name="date"/>
+          <field name="animal_id"/>
+          <field name="owner_id" string="Dueño"/>
+          <field name="exam_type" string="Examen"/>
+          <field name="priority" string="Prioridad"/>
+          <field name="state" string="Estado"/>
+        </tree>
+      </field>
+    </record>
+
+    <!-- ===== Form ===== -->
+    <record id="exam_order_form_view" model="ir.ui.view">
+      <field name="name">animal.exam.order.form.view</field>
+      <field name="model">animal.exam.order</field>
+      <field name="arch" type="xml">
+        <form string="Órdenes de Exámenes">
+          <header>
+            <!-- Odoo 17: usar invisible= en lugar de states= (si prefieres compatibilidad amplia, cambia por attrs) -->
+            <button name="action_confirm" type="object" class="btn-primary" string="Confirmar"
+                    invisible="state != 'draft'"/>
+            <button name="action_done" type="object" class="btn-primary" string="Marcar como Completado"
+                    invisible="state != 'ordered'"/>
+            <button name="action_cancel" type="object" string="Cancelar"
+                    invisible="not (state in ('draft','ordered'))"/>
+            <button name="action_reset_to_draft" type="object" string="Restablecer a Borrador"
+                    invisible="not (state in ('done','cancelled'))"/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,ordered,done,cancelled"/>
+          </header>
+
+          <sheet>
+            <!-- Título: Referencia -->
+            <group>
+              <field class="fs-1" name="sequence"/>
+            </group>
+
+            <group>
+              <!-- Columna derecha: datos administrativos -->
+              <group string="Datos" colspan="1">
+                <group>
+                  <field name="animal_id"/>
+                </group>
+                <group>
+                  <field name="owner_id" readonly="1"/>
+                </group>
+                <group col="4">
+                  <field name="date" colspan="2"/>
+                  <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional" colspan="2"/>
+                </group>
+              </group>
+
+              <!-- Columna izquierda: detalle de la orden -->
+              <group string="Detalle de la Orden" colspan="2">
+                <group>
+                  <field name="exam_type"/>
+                  <field name="exam_type_other" invisible="exam_type != 'otro'"/>
+                  <field name="priority"/>
+                  <field name="notes" placeholder="Indicaciones para el laboratorio / paciente..."/>
+                </group>
+                <group>
+                  <field name="results" placeholder="Resultados, observaciones o interpretación..."/>
+                  <field name="attachment_ids" widget="many2many_binary" string="Adjuntos (PDF, imágenes, etc.)"/>
+                </group>
+              </group>
+            </group>
+          </sheet>
+
+          <div class="oe_chatter">
+            <field widget="mail_thread" name="message_ids"/>
+            <field widget="mail_activity" name="activity_ids"/>
+          </div>
+        </form>
+      </field>
+    </record>
+
+    <!-- ===== Action ===== -->
+    <record id="exam_order_action" model="ir.actions.act_window">
+      <field name="name">Órdenes de Exámenes</field>
+      <field name="res_model">animal.exam.order</field>
+      <field name="view_mode">search,tree,form,kanban</field>
+    </record>
+
+  </data>
+</odoo>
+
 
 === ./views/insurances_views.xml ===
 <odoo>
@@ -1889,6 +2144,21 @@ from . import controllers
     </data>
 </odoo>
     
+
+=== ./views/exam_order_sequence.xml ===
+<odoo>
+  <data noupdate="1">
+    <!-- Secuencia para Órdenes de Exámenes -->
+    <record id="seq_animal_exam_order" model="ir.sequence">
+      <field name="name">Animal Orden de Examen</field>
+      <field name="code">animal.exam.order.sequence</field>
+      <field name="prefix">EXAM/</field>
+      <field name="padding">4</field>
+      <field name="number_increment">1</field>
+    </record>
+  </data>
+</odoo>
+
 
 === ./views/visits_views.xml ===
 <odoo>
@@ -2323,3 +2593,5 @@ from . import controllers
     </data>
 </odoo>
     
+
+=== ./combined.txt ===

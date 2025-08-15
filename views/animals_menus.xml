@@ -27,6 +27,9 @@
         <menuitem id="menu_surgeries_list" name="Cirugías" parent="menu_medical_management"
             action="surgery_action" />
 
+        <!-- NUEVO SUBMENÚ: Órdenes de Exámenes -->
+        <menuitem id="menu_exam_orders_list" name="Órdenes de Exámenes" parent="menu_medical_management"
+            action="exam_order_action" />
 
         <menuitem id="menu_insurances_list" name="Seguros" parent="menu_medical_management"
             action="insurance_action" />
