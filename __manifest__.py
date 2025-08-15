@@ -51,7 +51,7 @@ Manage the animals that visit our veterinarian
         # Vistas de Órdenes de Exámenes
         'views/exam_orders_views.xml',
 
-        # === EXISTENTE: Vistas de REGISTROS de Vacunación ===
+        # === EXISTENTE: Vistas de REGISTROS de Vacunación (actualizadas con dosis/lote) ===
         'views/vaccinations_views.xml',
 
         # === EXISTENTE: Catálogo y REGISTROS de Desparasitación ===

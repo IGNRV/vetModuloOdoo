@@ -74,7 +74,7 @@
             sequence="4"
         />
 
-        <!-- Contenedor: Gestión Médica (se puede dejar sin action si prefieres que sea solo contenedor) -->
+        <!-- Contenedor: Gestión Médica -->
         <menuitem
             id="menu_medical_management"
             name="Gestión Médica"
@@ -118,6 +118,14 @@
             name="Registros de Vacunación"
             parent="menu_medical_management"
             action="vaccination_action"
+        />
+
+        <!-- *** NUEVO: REGISTROS de MEDICACIÓN *** -->
+        <menuitem
+            id="menu_medications_list"
+            name="Registros de Medicación"
+            parent="menu_medical_management"
+            action="medication_action"
         />
 
         <!-- *** NUEVO: CONSENTIMIENTOS *** -->

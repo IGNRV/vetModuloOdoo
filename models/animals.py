@@ -33,11 +33,11 @@ class Animal(models.Model):
         ('medium', 'Mediano'),
         ('large', 'Grande'),
     ], string="Tamaño", default='small')
+
+    # Catálogo (tags rápidos) - se mantiene
     medicines = fields.Many2many("animal.medicine", string="Medicamentos", relation="animal_medicine_rel")
 
-    # Antes: relación simple Many2many sin detalles.
-    # Ahora: mantenemos 'vaccines' como campo calculado (solo lectura) para
-    # mostrar el listado de vacunas únicas aplicadas, basado en 'vaccination_ids'.
+    # ======= Vacunas / Desparasitación =======
     vaccines = fields.Many2many(
         "animal.vaccine",
         string="Vacunas",
@@ -46,14 +46,12 @@ class Animal(models.Model):
         store=True,
         readonly=True,
     )
-    # NUEVO: líneas de vacunación con detalles
     vaccination_ids = fields.One2many(
         "animal.vaccination",
         "animal_id",
         string="Vacunaciones"
     )
 
-    # ===== NUEVO BLOQUE: Desparasitaciones =====
     dewormers = fields.Many2many(
         "animal.dewormer",
         string="Desparasitantes",
@@ -66,6 +64,13 @@ class Animal(models.Model):
         "animal.deworming",
         "animal_id",
         string="Desparasitaciones"
+    )
+
+    # ======= Medicaciones (nuevo: registros que descuentan stock) =======
+    medication_ids = fields.One2many(
+        "animal.medication",
+        "animal_id",
+        string="Medicaciones"
     )
 
     diseases = fields.Many2many("animal.disease", string="Enfermedades", relation="animal_disease_rel")
@@ -131,9 +136,7 @@ class Animal(models.Model):
                 record.visit_count = 0
 
     def action_view_quotes(self):
-        # Obtener el ID del partner asociado
         partner_id = self.owner.id
-
         return {
             'name': 'Presupuestos',
             'type': 'ir.actions.act_window',
@@ -144,9 +147,7 @@ class Animal(models.Model):
         }
 
     def action_view_invoices(self):
-        # Obtener el ID del partner asociado
         partner_id = self.owner.id
-
         return {
             'name': 'Facturas',
             'type': 'ir.actions.act_window',
@@ -157,9 +158,7 @@ class Animal(models.Model):
         }
 
     def action_view_visits(self):
-        # Obtener el ID del partner asociado
         animal = self.id
-
         return {
             'name': 'Visitas',
             'type': 'ir.actions.act_window',
@@ -170,10 +169,8 @@ class Animal(models.Model):
         }
 
     def action_create_quote(self):
-        # Asegurarse de que el animal tiene un dueño
         if not self.owner:
             raise UserError('This animal does not have an owner defined.')
-
         return {
             'type': 'ir.actions.act_window',
             'name': 'Nuevo Presupuesto',
@@ -181,6 +178,6 @@ class Animal(models.Model):
             'view_mode': 'form',
             'target': 'current',
             'context': {
-                'default_partner_id': self.owner.id,  # Prellenar el cliente con el dueño del animal
+                'default_partner_id': self.owner.id,
             },
         }

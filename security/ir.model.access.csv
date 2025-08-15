@@ -17,3 +17,4 @@ access_animal_dewormer,animal.dewormer,model_animal_dewormer,base.group_user,1,1
 access_animal_deworming,animal.deworming,model_animal_deworming,base.group_user,1,1,1,1
 access_animal_consent,animal.consent,model_animal_consent,base.group_user,1,1,1,1
 access_vet_waiting_ticket,vet.waiting.ticket,model_vet_waiting_ticket,base.group_user,1,1,1,1
+access_animal_medication,animal.medication,model_animal_medication,base.group_user,1,1,1,1

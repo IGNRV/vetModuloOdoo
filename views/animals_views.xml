@@ -161,24 +161,62 @@
                 </field>
               </page>
 
+              <!-- ======== MEDICAMENTOS (catálogo rápido) + MEDICACIONES (registros) ======== -->
               <page string="Medicamentos">
-                <field name="medicines" />
+                <group string="Catálogo asociado (tags rápidos)">
+                  <field name="medicines" widget="many2many_tags"/>
+                </group>
+
+                <group string="Registros de medicación">
+                  <field name="medication_ids" context="{'default_animal_id': active_id}">
+                    <tree editable="bottom">
+                      <field name="date"/>
+                      <field name="medicine_id"/>
+                      <field name="quantity_units" string="Cantidad (unidades)"/>
+                      <field name="doctor" string="Dr/Dra"/>
+                      <field name="consume_stock"/>
+                      <field name="lot_number"/>
+                      <field name="lot_expiration"/>
+                      <field name="notes"/>
+                    </tree>
+                    <form>
+                      <group>
+                        <group string="Datos del Animal">
+                          <field name="animal_id"/>
+                          <field name="owner_id" readonly="1"/>
+                          <field name="specie_id" readonly="1"/>
+                        </group>
+                        <group string="Medicación">
+                          <field name="medicine_id"/>
+                          <field name="quantity_units" string="Cantidad (unidades)"/>
+                          <field name="consume_stock"/>
+                          <field name="date"/>
+                          <field name="doctor"/>
+                        </group>
+                      </group>
+                      <group string="Lote / Observaciones">
+                        <field name="lot_number"/>
+                        <field name="lot_expiration"/>
+                        <field name="notes"/>
+                      </group>
+                    </form>
+                  </field>
+                </group>
               </page>
 
-              <!-- ======== VACUNAS (MODIFICADO) ======== -->
+              <!-- ======== VACUNAS (con detalles de dosis/lote) ======== -->
               <page string="Vacunas">
-                <!--
-                  Reemplazamos el campo Many2many 'vaccines' por un One2many
-                  'vaccination_ids', donde se registran los detalles:
-                  fecha, vía, doctor y próxima vacunación.
-                -->
                 <field name="vaccination_ids" context="{'default_animal_id': active_id}">
                   <tree editable="bottom">
                     <field name="vaccine_id"/>
                     <field name="date"/>
+                    <field name="applied_doses" string="Dosis aplicadas"/>
                     <field name="route"/>
                     <field name="doctor" string="Dr/Dra"/>
                     <field name="next_date"/>
+                    <field name="consume_stock"/>
+                    <field name="lot_number"/>
+                    <field name="lot_expiration"/>
                     <field name="notes"/>
                   </tree>
                   <form>
@@ -186,27 +224,33 @@
                       <group>
                         <field name="vaccine_id"/>
                         <field name="date"/>
+                        <field name="applied_doses" string="Dosis aplicadas"/>
                       </group>
                       <group>
                         <field name="route"/>
                         <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional"/>
+                        <field name="consume_stock"/>
                       </group>
                       <group>
                         <field name="next_date"/>
                         <field name="owner_id" readonly="1"/>
+                        <field name="specie_id" readonly="1"/>
+                      </group>
+                      <group string="Lote">
+                        <field name="lot_number"/>
+                        <field name="lot_expiration"/>
                       </group>
                       <field name="notes" placeholder="Observaciones adicionales..."/>
                     </group>
                   </form>
                 </field>
 
-                <!-- Opcional (solo lectura): listado de vacunas aplicadas (únicas) -->
                 <group string="Resumen de vacunas aplicadas (solo lectura)">
                   <field name="vaccines" widget="many2many_tags" options="{'no_create': True, 'no_create_edit': True, 'no_open': True}" readonly="1"/>
                 </group>
               </page>
 
-              <!-- ======== DESPARASITACIONES (NUEVA PESTAÑA) ======== -->
+              <!-- ======== DESPARASITACIONES ======== -->
               <page string="Desparasitaciones">
                 <field name="deworming_ids" context="{'default_animal_id': active_id}">
                   <tree editable="bottom">
@@ -274,7 +318,6 @@
                   </group>
                 </group>
                 <group>
-                  <!-- Eliminado el campo Altura y su unidad -->
                   <group>
                     <field name="tags" string="Color" widget="many2many_tags" options="{'color_field': 'color'}" />
                   </group>
