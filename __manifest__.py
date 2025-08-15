@@ -38,6 +38,9 @@ Manage the animals that visit our veterinarian
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
 
+        # Vistas de Seguros (FALTABA) -> Debe ir antes de los menús
+        'views/insurances_views.xml',
+
         # Vistas de Esterilizaciones
         'views/sterilizations_views.xml',
 

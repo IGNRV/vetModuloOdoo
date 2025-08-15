@@ -23,8 +23,11 @@
       <field name="report_name">vet.report_exam_order</field>
       <field name="report_file">vet.report_exam_order</field>
       <field name="paperformat_id" ref="vet.paperformat_exam_order_noheader"/>
+      <!-- Cambiamos el nombre del archivo según el estado:
+           - Si está 'done' => "... - Resultado.pdf"
+           - En cualquier otro estado => "... - Orden.pdf" -->
       <field name="print_report_name">
-        (object.sequence or 'Orden de Examen') + ' - Orden.pdf'
+        (object.sequence or 'Orden de Examen') + (' - Resultado.pdf' if object.state == 'done' else ' - Orden.pdf')
       </field>
     </record>
 
@@ -97,7 +100,10 @@
             </span>
           </div>
 
-          <div class="title" style="margin:6px 0;">ORDEN DE EXÁMEN</div>
+          <!-- TÍTULO DINÁMICO SEGÚN ESTADO -->
+          <div class="title" style="margin:6px 0;">
+            <t t-esc="'RESULTADO DE EXAMEN' if o.state == 'done' else 'ORDEN DE EXAMEN'"/>
+          </div>
 
           <!-- Información del propietario -->
           <table class="boxed" style="margin-top:6px;">

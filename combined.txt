@@ -641,6 +641,36 @@ from . import controllers
 from . import models
 from . import report
 
+=== ./report/report_exam_order.py ===
+# -*- coding: utf-8 -*-
+from odoo import models
+from odoo.tools import file_open
+import base64
+
+
+class ReportExamOrder(models.AbstractModel):
+    _name = 'report.vet.report_exam_order'
+    _description = 'Report Exam Order (PDF)'
+
+    def _get_report_values(self, docids, data=None):
+        docs = self.env['animal.exam.order'].browse(docids)
+
+        header_b64 = False
+        # Reutilizamos el header de "visita" si existe en el módulo
+        try:
+            with file_open('vet/static/src/img/visita_header.png', 'rb') as f:
+                header_b64 = base64.b64encode(f.read()).decode('utf-8')
+        except Exception:
+            header_b64 = False
+
+        return {
+            'doc_ids': docs.ids,
+            'doc_model': 'animal.exam.order',
+            'docs': docs,
+            'exam_header_image': header_b64,
+        }
+
+
 === ./report/report_sterilization.py ===
 # -*- coding: utf-8 -*-
 from odoo import models
@@ -683,6 +713,8 @@ class ReportSterilization(models.AbstractModel):
 # -*- coding: utf-8 -*-
 from . import report_sterilization
 from . import report_visit
+from . import report_exam_order
+
 
 === ./report/visit_report.xml ===
 <odoo>
@@ -1401,6 +1433,246 @@ from . import report_visit
   </data>
 </odoo>
 
+=== ./report/exam_order_report.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- ===== Paperformat SIN header reservado (Odoo 17) ===== -->
+    <record id="paperformat_exam_order_noheader" model="report.paperformat">
+      <field name="name">Exam Order PDF (no header)</field>
+      <field name="format">A4</field>
+      <field name="orientation">Portrait</field>
+      <field name="margin_top">6</field>
+      <field name="margin_bottom">8</field>
+      <field name="margin_left">10</field>
+      <field name="margin_right">10</field>
+      <field name="header_line">False</field>
+      <field name="header_spacing">0</field>
+    </record>
+
+    <!-- ===== Acción de reporte PDF ===== -->
+    <record id="action_report_exam_order" model="ir.actions.report">
+      <field name="name">Orden de Examen</field>
+      <field name="model">animal.exam.order</field>
+      <field name="report_type">qweb-pdf</field>
+      <field name="report_name">vet.report_exam_order</field>
+      <field name="report_file">vet.report_exam_order</field>
+      <field name="paperformat_id" ref="vet.paperformat_exam_order_noheader"/>
+      <!-- Cambiamos el nombre del archivo según el estado:
+           - Si está 'done' => "... - Resultado.pdf"
+           - En cualquier otro estado => "... - Orden.pdf" -->
+      <field name="print_report_name">
+        (object.sequence or 'Orden de Examen') + (' - Resultado.pdf' if object.state == 'done' else ' - Orden.pdf')
+      </field>
+    </record>
+
+    <!-- ===== Contenedor por registro ===== -->
+    <template id="report_exam_order">
+      <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="doc">
+          <t t-call="vet.report_exam_order_document"/>
+          <div class="pagebreak"/>
+        </t>
+      </t>
+    </template>
+
+    <!-- ===== Documento ===== -->
+    <template id="report_exam_order_document">
+      <t t-set="o" t-value="doc"/>
+      <t t-call="web.external_layout">
+        <style type="text/css">
+          .exo * { font-size: 12px; font-family: "DejaVu Sans", sans-serif; }
+          .exo .title { font-size: 18px; font-weight: 700; text-align:center; }
+          .exo .subtitle { font-size: 12px; text-align:center; }
+          .exo table { width: 100%; border-collapse: collapse; }
+          .exo th, .exo td { border: 0; padding: 4px 6px; vertical-align: top; }
+          .exo .section { font-weight: 700; text-align:center; border: 1px solid #000; background: #f3f3f3; }
+          .exo .boxed { border: 1px solid #000; }
+          .exo .rowline td { border-bottom: 1px solid #000; }
+          .exo .label { width: 22%; white-space: nowrap; }
+          .exo .val { width: 28%; border-bottom: 1px solid #000; }
+          .exo .val2 { border-bottom: 1px solid #000; }
+          .exo .muted { color:#666; }
+          .exo .header-strip { margin-bottom: 4px; }
+          .exo .header-image { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+          .exo .header-date { text-align: right; margin: 2px 0 6px; }
+          .exo .small { font-size: 11px; }
+
+          /* ===== Ocultar pie y header estándar SOLO en este reporte ===== */
+          .footer,
+          .o_footer,
+          .o_report_layout_standard .footer,
+          .o_report_layout_boxed .footer,
+          .o_report_layout_bold .footer,
+          .header,
+          .o_header,
+          .o_report_layout_standard .header,
+          .o_report_layout_boxed .header,
+          .o_report_layout_bold .header {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+          }
+          .footer * { border: 0 !important; }
+        </style>
+
+        <div class="exo">
+
+          <!-- Cabecera con imagen + fecha -->
+          <div class="header-strip">
+            <img class="header-image"
+                 t-if="exam_header_image"
+                 t-att-src="'data:image/png;base64,%s' % (exam_header_image)"
+                 alt="Encabezado"/>
+          </div>
+          <div class="header-date">
+            Fecha:
+            <span class="val2">
+              <span t-field="o.date" t-options='{"widget": "date"}'/>
+            </span>
+          </div>
+
+          <!-- TÍTULO DINÁMICO SEGÚN ESTADO -->
+          <div class="title" style="margin:6px 0;">
+            <t t-esc="'RESULTADO DE EXAMEN' if o.state == 'done' else 'ORDEN DE EXAMEN'"/>
+          </div>
+
+          <!-- Información del propietario -->
+          <table class="boxed" style="margin-top:6px;">
+            <tr>
+              <th class="section" colspan="4">Información del propietario</th>
+            </tr>
+            <tr>
+              <td class="label">Nombre completo :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.name or '')"/>
+              </td>
+              <td class="label">RUT :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.vat or '')"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Teléfono :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.phone or o.owner_id.mobile or '')"/>
+              </td>
+              <td class="label">Correo :</td>
+              <td class="val">
+                <t t-esc="o.owner_id and (o.owner_id.email or '')"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Dirección :</td>
+              <td class="val" colspan="3">
+                <t t-esc="o.owner_id and (o.owner_id.street or '')"/>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Información del paciente -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr>
+              <th class="section" colspan="6">Información del paciente</th>
+            </tr>
+            <tr>
+              <td class="label">Nombre:</td>
+              <td class="val">
+                <t t-esc="o.animal_id and (o.animal_id.name or '')"/>
+              </td>
+              <td class="label">Especie (C/F):</td>
+              <td class="val">
+                <t t-esc="o.specie and o.specie.name or ''"/>
+              </td>
+              <td class="label">N° de Microchip:</td>
+              <td class="val">
+                <t t-esc="o.animal_id and (o.animal_id.microchip_number or '')"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Sexo:</td>
+              <td class="val">
+                <t t-esc="({'male':'Masculino','female':'Femenino'}).get(o.animal_id.sex) if o.animal_id else ''"/>
+              </td>
+              <td class="label">Raza:</td>
+              <td class="val">
+                <t t-esc="o.breed and o.breed.name or (o.animal_id and (o.animal_id.breed and o.animal_id.breed.name) or '')"/>
+              </td>
+              <td class="label">Color:</td>
+              <td class="val">
+                <t t-if="o.animal_id and o.animal_id.tags">
+                  <t t-foreach="o.animal_id.tags" t-as="c">
+                    <t t-esc="c.name"/><t t-if="c != o.animal_id.tags[-1]">, </t>
+                  </t>
+                </t>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Detalle de la orden -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr>
+              <th class="section" colspan="4">Detalle de la orden</th>
+            </tr>
+            <tr>
+              <td class="label">Referencia:</td>
+              <td class="val">
+                <t t-esc="o.sequence or ''"/>
+              </td>
+              <td class="label">Profesional (Dr/Dra):</td>
+              <td class="val">
+                <t t-esc="o.doctor or ''"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Tipo de examen:</td>
+              <td class="val" colspan="3">
+                <t t-esc="dict(o._fields['exam_type'].selection).get(o.exam_type) if o.exam_type else ''"/>
+                <t t-if="o.exam_type == 'otro' and o.exam_type_other">
+                  — <t t-esc="o.exam_type_other"/>
+                </t>
+              </td>
+            </tr>
+            <tr>
+              <td class="label">Prioridad:</td>
+              <td class="val">
+                <t t-esc="dict(o._fields['priority'].selection).get(o.priority) if o.priority else ''"/>
+              </td>
+              <td class="label"></td>
+              <td class="val"></td>
+            </tr>
+            <tr>
+              <td class="label" colspan="4">Notas / Indicaciones:</td>
+            </tr>
+            <tr>
+              <td class="val2" colspan="4" style="height: 84px;">
+                <t t-esc="o.notes or ''"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="label" colspan="4">Resultados / Observaciones:</td>
+            </tr>
+            <tr>
+              <td class="val2" colspan="4" style="height: 110px;">
+                <t t-esc="o.results or ''"/>
+              </td>
+            </tr>
+          </table>
+
+          <div class="small muted" style="margin-top:6px;">
+            Ref.: <t t-esc="o.sequence or ''"/> — Paciente: <t t-esc="o.animal_id and o.animal_id.name or ''"/>
+          </div>
+        </div>
+      </t>
+    </template>
+
+  </data>
+</odoo>
+
 === ./report/report_visit.py ===
 # -*- coding: utf-8 -*-
 from odoo import models
@@ -1466,6 +1738,7 @@ Manage the animals that visit our veterinarian
         # === Reportes ===
         'report/sterilization_report.xml',
         'report/visit_report.xml',
+        'report/exam_order_report.xml',   # <--- NUEVO (debe ir antes de la vista que usa su acción)
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -1473,12 +1746,14 @@ Manage the animals that visit our veterinarian
         'views/allergies_views.xml',
         'views/surgeries_views.xml',
         'views/vaccines_views.xml',
-        'views/insurances_views.xml',
         'views/visits_views.xml',
         'views/species_views.xml',
         'views/breeds_views.xml',
         'views/tags_views.xml',
         'views/animal_partner_views.xml',
+
+        # Vistas de Seguros (FALTABA) -> Debe ir antes de los menús
+        'views/insurances_views.xml',
 
         # Vistas de Esterilizaciones
         'views/sterilizations_views.xml',
@@ -1941,54 +2216,127 @@ from . import controllers
 
 
 === ./views/animals_menus.xml ===
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
+        <!-- Menú raíz -->
         <menuitem id="menu_animals" name="Vet" sequence="5"/>
 
-        <menuitem id="menu_animals_list" name="Animales" parent="menu_animals"
-            action="animals_action" sequence="1" />
+        <!-- Listado de animales -->
+        <menuitem
+            id="menu_animals_list"
+            name="Animales"
+            parent="menu_animals"
+            action="animals_action"
+            sequence="1"
+        />
 
-        <menuitem id="menu_visits_list" name="Visitas" parent="menu_animals"
-            action="visit_action" sequence="2" />
+        <!-- Visitas -->
+        <menuitem
+            id="menu_visits_list"
+            name="Visitas"
+            parent="menu_animals"
+            action="visit_action"
+            sequence="2"
+        />
 
-        <!-- NUEVO MENÚ: Esterilizaciones -->
-        <menuitem id="menu_sterilizations_list" name="Esterilizaciones" parent="menu_animals"
-            action="sterilization_action" sequence="3" />
+        <!-- Esterilizaciones -->
+        <menuitem
+            id="menu_sterilizations_list"
+            name="Esterilizaciones"
+            parent="menu_animals"
+            action="sterilization_action"
+            sequence="3"
+        />
 
-        <menuitem id="menu_medical_management" name="Gestión Médica" parent="menu_animals"
-            action="animals_action" sequence="4" />
+        <!-- Contenedor: Gestión Médica (se puede dejar sin action si prefieres que sea solo contenedor) -->
+        <menuitem
+            id="menu_medical_management"
+            name="Gestión Médica"
+            parent="menu_animals"
+            action="animals_action"
+            sequence="4"
+        />
 
-        <menuitem id="menu_medicines_list" name="Medicamentos" parent="menu_medical_management"
-            action="medicine_action" />
+        <menuitem
+            id="menu_medicines_list"
+            name="Medicamentos"
+            parent="menu_medical_management"
+            action="medicine_action"
+        />
+        <menuitem
+            id="menu_vaccines_list"
+            name="Vacunas"
+            parent="menu_medical_management"
+            action="vaccine_action"
+        />
+        <menuitem
+            id="menu_allergies_list"
+            name="Alergias"
+            parent="menu_medical_management"
+            action="allergy_action"
+        />
+        <menuitem
+            id="menu_surgeries_list"
+            name="Cirugías"
+            parent="menu_medical_management"
+            action="surgery_action"
+        />
 
-        <menuitem id="menu_vaccines_list" name="Vacunas" parent="menu_medical_management"
-            action="vaccine_action" />
+        <!-- Órdenes de Exámenes -->
+        <menuitem
+            id="menu_exam_orders_list"
+            name="Órdenes de Exámenes"
+            parent="menu_medical_management"
+            action="exam_order_action"
+        />
 
-        <menuitem id="menu_allergies_list" name="Alergias" parent="menu_medical_management"
-            action="allergy_action" />
+        <!-- Resultados de Exámenes (solo 'done') -->
+        <menuitem
+            id="menu_exam_results_list"
+            name="Resultados de Exámenes"
+            parent="menu_medical_management"
+            action="exam_results_action"
+        />
 
-        <menuitem id="menu_surgeries_list" name="Cirugías" parent="menu_medical_management"
-            action="surgery_action" />
+        <!-- Seguros -->
+        <menuitem
+            id="menu_insurances_list"
+            name="Seguros"
+            parent="menu_medical_management"
+            action="insurance_action"
+        />
 
-        <!-- NUEVO SUBMENÚ: Órdenes de Exámenes -->
-        <menuitem id="menu_exam_orders_list" name="Órdenes de Exámenes" parent="menu_medical_management"
-            action="exam_order_action" />
+        <!-- Configuración -->
+        <menuitem
+            id="menu_configuration"
+            name="Configuration"
+            parent="menu_animals"
+            action="animals_action"
+            sequence="5"
+        />
 
-        <menuitem id="menu_insurances_list" name="Seguros" parent="menu_medical_management"
-            action="insurance_action" />
-
-        <menuitem id="menu_configuration" name="Configuration" parent="menu_animals"
-            action="animals_action" sequence="5" />
-
-        <menuitem id="menu_species_list" name="Especies" parent="menu_configuration"
-            action="specie_action" sequence="1" />
-
-        <menuitem id="menu_breeds_list" name="Razas" parent="menu_configuration"
-            action="breed_action" sequence="2" />
-
-        <menuitem id="menu_tags_list" name="Etiquetas" parent="menu_configuration"
-            action="tag_action" sequence="3" />
-
+        <menuitem
+            id="menu_species_list"
+            name="Especies"
+            parent="menu_configuration"
+            action="specie_action"
+            sequence="1"
+        />
+        <menuitem
+            id="menu_breeds_list"
+            name="Razas"
+            parent="menu_configuration"
+            action="breed_action"
+            sequence="2"
+        />
+        <menuitem
+            id="menu_tags_list"
+            name="Etiquetas"
+            parent="menu_configuration"
+            action="tag_action"
+            sequence="3"
+        />
     </data>
 </odoo>
 
@@ -2049,7 +2397,6 @@ from . import controllers
       <field name="arch" type="xml">
         <form string="Órdenes de Exámenes">
           <header>
-            <!-- Odoo 17: usar invisible= en lugar de states= (si prefieres compatibilidad amplia, cambia por attrs) -->
             <button name="action_confirm" type="object" class="btn-primary" string="Confirmar"
                     invisible="state != 'draft'"/>
             <button name="action_done" type="object" class="btn-primary" string="Marcar como Completado"
@@ -2058,6 +2405,21 @@ from . import controllers
                     invisible="not (state in ('draft','ordered'))"/>
             <button name="action_reset_to_draft" type="object" string="Restablecer a Borrador"
                     invisible="not (state in ('done','cancelled'))"/>
+
+            <!-- Descarga de PDF de la ORDEN (visible al estar confirmada) -->
+            <button name="%(action_report_exam_order)d"
+                    type="action"
+                    class="btn-secondary"
+                    string="Descargar Orden PDF"
+                    invisible="state != 'ordered'"/>
+
+            <!-- Descarga de PDF con RESULTADOS (visible en menú 'Resultados de Exámenes' = state done) -->
+            <button name="%(action_report_exam_order)d"
+                    type="action"
+                    class="btn-secondary"
+                    string="Descargar Resultado PDF"
+                    invisible="state != 'done'"/>
+
             <field name="state" widget="statusbar" statusbar_visible="draft,ordered,done,cancelled"/>
           </header>
 
@@ -2069,7 +2431,7 @@ from . import controllers
 
             <group>
               <!-- Columna derecha: datos administrativos -->
-              <group string="Datos" colspan="1">
+              <group string="Datos">
                 <group>
                   <field name="animal_id"/>
                 </group>
@@ -2106,11 +2468,19 @@ from . import controllers
       </field>
     </record>
 
-    <!-- ===== Action ===== -->
+    <!-- ===== Action (todas las órdenes) ===== -->
     <record id="exam_order_action" model="ir.actions.act_window">
       <field name="name">Órdenes de Exámenes</field>
       <field name="res_model">animal.exam.order</field>
       <field name="view_mode">search,tree,form,kanban</field>
+    </record>
+
+    <!-- ===== Action (solo resultados/completadas) ===== -->
+    <record id="exam_results_action" model="ir.actions.act_window">
+      <field name="name">Resultados de Exámenes</field>
+      <field name="res_model">animal.exam.order</field>
+      <field name="view_mode">search,tree,form,kanban</field>
+      <field name="domain">[('state', '=', 'done')]</field>
     </record>
 
   </data>

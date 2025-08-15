@@ -62,12 +62,19 @@
             <button name="action_reset_to_draft" type="object" string="Restablecer a Borrador"
                     invisible="not (state in ('done','cancelled'))"/>
 
-            <!-- ===== NUEVO: Botón de descarga de PDF visible SOLO cuando está confirmada (ordered) ===== -->
+            <!-- Descarga de PDF de la ORDEN (visible al estar confirmada) -->
             <button name="%(action_report_exam_order)d"
                     type="action"
                     class="btn-secondary"
-                    string="Descargar PDF"
+                    string="Descargar Orden PDF"
                     invisible="state != 'ordered'"/>
+
+            <!-- Descarga de PDF con RESULTADOS (visible en menú 'Resultados de Exámenes' = state done) -->
+            <button name="%(action_report_exam_order)d"
+                    type="action"
+                    class="btn-secondary"
+                    string="Descargar Resultado PDF"
+                    invisible="state != 'done'"/>
 
             <field name="state" widget="statusbar" statusbar_visible="draft,ordered,done,cancelled"/>
           </header>
@@ -80,7 +87,7 @@
 
             <group>
               <!-- Columna derecha: datos administrativos -->
-              <group string="Datos" colspan="1">
+              <group string="Datos">
                 <group>
                   <field name="animal_id"/>
                 </group>
@@ -117,11 +124,19 @@
       </field>
     </record>
 
-    <!-- ===== Action ===== -->
+    <!-- ===== Action (todas las órdenes) ===== -->
     <record id="exam_order_action" model="ir.actions.act_window">
       <field name="name">Órdenes de Exámenes</field>
       <field name="res_model">animal.exam.order</field>
       <field name="view_mode">search,tree,form,kanban</field>
+    </record>
+
+    <!-- ===== Action (solo resultados/completadas) ===== -->
+    <record id="exam_results_action" model="ir.actions.act_window">
+      <field name="name">Resultados de Exámenes</field>
+      <field name="res_model">animal.exam.order</field>
+      <field name="view_mode">search,tree,form,kanban</field>
+      <field name="domain">[('state', '=', 'done')]</field>
     </record>
 
   </data>
