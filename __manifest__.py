@@ -8,8 +8,8 @@
 Manage the animals that visit our veterinarian
     """,
 
-    'author': "Javier Diez",
-    'website': "https://javierdiez.netlify.app/",
+    'author': "z99sys",
+    'website': "https://z99sys.cl/",
     'license': 'AGPL-3',
     'category': 'Animales',
     'version': '1.0',
