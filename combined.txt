@@ -1,14 +1,153 @@
 
 
 === ./models/vaccines.py ===
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+
 
 class Vaccine(models.Model):
     _name = "animal.vaccine"
     _description = "Animal vaccines table"
 
+    # === Datos básicos ===
     name = fields.Char(string="Vacuna", required=True)
     description = fields.Text(string="Descripción")
+
+    # === Presentación / Empaques ===
+    vials_per_box = fields.Integer(
+        string="Frascos por caja",
+        default=1,
+        help="Cantidad de frascos que trae una caja (presentación). Debe ser mayor que 0."
+    )
+    doses_per_vial = fields.Integer(
+        string="Dosis por frasco",
+        default=1,
+        help="Cantidad de dosis que trae un frasco (presentación). Debe ser mayor que 0."
+    )
+    packaging_notes = fields.Text(
+        string="Notas de presentación",
+        help="Notas generales sobre presentación, instrucciones, equivalencias, etc."
+    )
+
+    # === Stock por presentación (editable) ===
+    stock_boxes = fields.Integer(
+        string="Stock (cajas)",
+        default=0,
+        tracking=True
+    )
+    stock_vials = fields.Integer(
+        string="Stock (frascos sueltos)",
+        default=0,
+        tracking=True
+    )
+    stock_doses = fields.Float(
+        string="Stock (dosis sueltas)",
+        default=0.0,
+        tracking=True,
+        help="Dosis sueltas disponibles (puede incluir fracciones si se aprovecha un frasco parcialmente)."
+    )
+
+    # === Totales (lectura) ===
+    stock_total_doses = fields.Float(
+        string="Stock total (dosis)",
+        compute="_compute_stock_total_doses",
+        store=True,
+        help="Total de dosis considerando cajas, frascos y dosis sueltas."
+    )
+
+    @api.depends('stock_boxes', 'stock_vials', 'stock_doses', 'vials_per_box', 'doses_per_vial')
+    def _compute_stock_total_doses(self):
+        for rec in self:
+            vpb = max(rec.vials_per_box or 0, 0)
+            dpv = max(rec.doses_per_vial or 0, 0)
+            total = (rec.stock_boxes or 0) * vpb * dpv
+            total += (rec.stock_vials or 0) * dpv
+            total += (rec.stock_doses or 0.0)
+            rec.stock_total_doses = total
+
+    # === Validaciones ===
+    @api.constrains('vials_per_box', 'doses_per_vial', 'stock_boxes', 'stock_vials', 'stock_doses')
+    def _check_non_negative_and_positive_conversions(self):
+        for rec in self:
+            if rec.vials_per_box and rec.vials_per_box < 1:
+                raise UserError(_("El campo 'Frascos por caja' debe ser mayor o igual a 1."))
+            if rec.doses_per_vial and rec.doses_per_vial < 1:
+                raise UserError(_("El campo 'Dosis por frasco' debe ser mayor o igual a 1."))
+            if rec.stock_boxes is not None and rec.stock_boxes < 0:
+                raise UserError(_("El stock de cajas no puede ser negativo."))
+            if rec.stock_vials is not None and rec.stock_vials < 0:
+                raise UserError(_("El stock de frascos no puede ser negativo."))
+            if rec.stock_doses is not None and rec.stock_doses < 0:
+                raise UserError(_("El stock de dosis sueltas no puede ser negativo."))
+
+    # === Consumo / Reposición de stock en 'dosis' ===
+    def _ensure_enough_doses(self, doses_needed):
+        self.ensure_one()
+        if doses_needed <= 0:
+            return
+        if (self.stock_total_doses or 0.0) < doses_needed:
+            raise UserError(_(
+                "Stock insuficiente de la vacuna '%s'. Dosis requeridas: %.2f, disponibles: %.2f"
+            ) % (self.name, doses_needed, self.stock_total_doses or 0.0))
+
+    def _break_vial_to_doses(self, how_many_vials=1):
+        """Convierte frascos a dosis sueltas, si hay frascos disponibles."""
+        self.ensure_one()
+        if how_many_vials <= 0:
+            return
+        if (self.stock_vials or 0) < how_many_vials:
+            raise UserError(_("No hay frascos suficientes para fraccionar."))
+        self.stock_vials -= how_many_vials
+        self.stock_doses += float(how_many_vials) * float(self.doses_per_vial or 0)
+
+    def _break_box_to_vials(self, how_many_boxes=1):
+        """Convierte cajas a frascos sueltos."""
+        self.ensure_one()
+        if how_many_boxes <= 0:
+            return
+        if (self.stock_boxes or 0) < how_many_boxes:
+            raise UserError(_("No hay cajas suficientes para fraccionar."))
+        self.stock_boxes -= how_many_boxes
+        self.stock_vials += int(how_many_boxes) * int(self.vials_per_box or 0)
+
+    def _consume_doses(self, doses):
+        """
+        Consume 'doses' dosis del stock, fraccionando según sea necesario:
+        primero dosis sueltas, luego frascos, luego cajas.
+        """
+        self.ensure_one()
+        if not doses or doses <= 0:
+            return
+
+        self._ensure_enough_doses(doses)
+
+        # Asegurar suficiencia de dosis sueltas, fraccionando de frascos/cajas si falta
+        dpv = int(self.doses_per_vial or 0)
+        vpb = int(self.vials_per_box or 0)
+
+        # Si faltan dosis sueltas, intento romper frascos; si no, cajas.
+        deficit = doses - (self.stock_doses or 0.0)
+        while deficit > 0:
+            if (self.stock_vials or 0) > 0:
+                self._break_vial_to_doses(1)
+            elif (self.stock_boxes or 0) > 0:
+                self._break_box_to_vials(1)
+            else:
+                # No debería entrar aquí por _ensure_enough_doses, pero por seguridad:
+                raise UserError(_("No hay stock suficiente para fraccionar en dosis."))
+            deficit = doses - (self.stock_doses or 0.0)
+
+        # Ahora ya hay dosis sueltas suficientes
+        self.stock_doses -= doses
+
+    def _revert_doses(self, doses):
+        """
+        Devuelve 'doses' dosis al stock como dosis sueltas (no recompone cajas/frasco).
+        """
+        self.ensure_one()
+        if not doses or doses <= 0:
+            return
+        self.stock_doses += doses
 
 
 class Vaccination(models.Model):
@@ -49,6 +188,22 @@ class Vaccination(models.Model):
     next_date = fields.Date(string="Próxima vacunación", tracking=True)
     notes = fields.Text(string="Notas/Observaciones")
 
+    # === Detalles de consumo / lote ===
+    applied_doses = fields.Float(
+        string="Dosis aplicadas",
+        default=1.0,
+        tracking=True,
+        help="Cantidad de dosis aplicadas en este registro (se descuenta del stock si corresponde)."
+    )
+    lot_number = fields.Char(string="Lote / Serie")
+    lot_expiration = fields.Date(string="Vencimiento (lote)")
+
+    consume_stock = fields.Boolean(
+        string="Descontar stock",
+        default=True,
+        help="Si está activado, al guardar se descuenta la(s) dosis del stock de la vacuna."
+    )
+
     # Auxiliares de lectura
     owner_id = fields.Many2one(
         related="animal_id.owner",
@@ -86,6 +241,67 @@ class Vaccination(models.Model):
          'Ya existe un registro de esta vacuna para el animal en la misma fecha.')
     ]
 
+    # === Movimiento de stock ===
+    @api.model
+    def create(self, vals):
+        records = super().create(vals)
+        for rec in records:
+            if rec.consume_stock and rec.vaccine_id and rec.applied_doses:
+                rec.vaccine_id._consume_doses(rec.applied_doses)
+        return records
+
+    def write(self, vals):
+        # Guardamos estado previo para calcular diferencias
+        before = {rec.id: {
+            'vaccine_id': rec.vaccine_id.id,
+            'applied_doses': rec.applied_doses,
+            'consume_stock': rec.consume_stock,
+        } for rec in self}
+
+        res = super().write(vals)
+
+        for rec in self:
+            prev = before[rec.id]
+            prev_vac = prev['vaccine_id'] and self.env['animal.vaccine'].browse(prev['vaccine_id']) or False
+            prev_doses = float(prev['applied_doses'] or 0.0)
+            prev_consume = bool(prev['consume_stock'])
+            new_vac = rec.vaccine_id
+            new_doses = float(rec.applied_doses or 0.0)
+            new_consume = bool(rec.consume_stock)
+
+            # Casos:
+            # 1) Antes consumía y ahora NO -> revertir prev_doses en prev_vac
+            if prev_consume and not new_consume and prev_vac and prev_doses:
+                prev_vac._revert_doses(prev_doses)
+
+            # 2) Antes NO y ahora SÍ -> consumir new_doses en new_vac
+            elif not prev_consume and new_consume and new_vac and new_doses:
+                new_vac._consume_doses(new_doses)
+
+            # 3) Sigue consumiendo: revisar cambios de vacuna o cantidad
+            elif prev_consume and new_consume:
+                if prev_vac and new_vac and prev_vac.id != new_vac.id:
+                    # Cambió la vacuna: devolver a la anterior y consumir de la nueva
+                    if prev_doses:
+                        prev_vac._revert_doses(prev_doses)
+                    if new_doses:
+                        new_vac._consume_doses(new_doses)
+                else:
+                    # Misma vacuna: consumir diferencia
+                    delta = new_doses - prev_doses
+                    if delta > 0:
+                        new_vac._consume_doses(delta)
+                    elif delta < 0:
+                        new_vac._revert_doses(-delta)
+
+        return res
+
+    def unlink(self):
+        for rec in self:
+            if rec.consume_stock and rec.vaccine_id and rec.applied_doses:
+                # Devolver las dosis consumidas
+                rec.vaccine_id._revert_doses(rec.applied_doses)
+        return super().unlink()
 
 === ./models/tag.py ===
 from odoo import models, fields, api
@@ -740,11 +956,11 @@ class Animal(models.Model):
         ('medium', 'Mediano'),
         ('large', 'Grande'),
     ], string="Tamaño", default='small')
+
+    # Catálogo (tags rápidos) - se mantiene
     medicines = fields.Many2many("animal.medicine", string="Medicamentos", relation="animal_medicine_rel")
 
-    # Antes: relación simple Many2many sin detalles.
-    # Ahora: mantenemos 'vaccines' como campo calculado (solo lectura) para
-    # mostrar el listado de vacunas únicas aplicadas, basado en 'vaccination_ids'.
+    # ======= Vacunas / Desparasitación =======
     vaccines = fields.Many2many(
         "animal.vaccine",
         string="Vacunas",
@@ -753,14 +969,12 @@ class Animal(models.Model):
         store=True,
         readonly=True,
     )
-    # NUEVO: líneas de vacunación con detalles
     vaccination_ids = fields.One2many(
         "animal.vaccination",
         "animal_id",
         string="Vacunaciones"
     )
 
-    # ===== NUEVO BLOQUE: Desparasitaciones =====
     dewormers = fields.Many2many(
         "animal.dewormer",
         string="Desparasitantes",
@@ -773,6 +987,13 @@ class Animal(models.Model):
         "animal.deworming",
         "animal_id",
         string="Desparasitaciones"
+    )
+
+    # ======= Medicaciones (nuevo: registros que descuentan stock) =======
+    medication_ids = fields.One2many(
+        "animal.medication",
+        "animal_id",
+        string="Medicaciones"
     )
 
     diseases = fields.Many2many("animal.disease", string="Enfermedades", relation="animal_disease_rel")
@@ -838,9 +1059,7 @@ class Animal(models.Model):
                 record.visit_count = 0
 
     def action_view_quotes(self):
-        # Obtener el ID del partner asociado
         partner_id = self.owner.id
-
         return {
             'name': 'Presupuestos',
             'type': 'ir.actions.act_window',
@@ -851,9 +1070,7 @@ class Animal(models.Model):
         }
 
     def action_view_invoices(self):
-        # Obtener el ID del partner asociado
         partner_id = self.owner.id
-
         return {
             'name': 'Facturas',
             'type': 'ir.actions.act_window',
@@ -864,9 +1081,7 @@ class Animal(models.Model):
         }
 
     def action_view_visits(self):
-        # Obtener el ID del partner asociado
         animal = self.id
-
         return {
             'name': 'Visitas',
             'type': 'ir.actions.act_window',
@@ -877,10 +1092,8 @@ class Animal(models.Model):
         }
 
     def action_create_quote(self):
-        # Asegurarse de que el animal tiene un dueño
         if not self.owner:
             raise UserError('This animal does not have an owner defined.')
-
         return {
             'type': 'ir.actions.act_window',
             'name': 'Nuevo Presupuesto',
@@ -888,9 +1101,10 @@ class Animal(models.Model):
             'view_mode': 'form',
             'target': 'current',
             'context': {
-                'default_partner_id': self.owner.id,  # Prellenar el cliente con el dueño del animal
+                'default_partner_id': self.owner.id,
             },
         }
+
 
 === ./models/consents.py ===
 from odoo import models, fields, api
@@ -1205,14 +1419,275 @@ class Surgery(models.Model):
 
 
 === ./models/medicines.py ===
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+
 
 class Medicine(models.Model):
     _name = "animal.medicine"
     _description = "Animal medicines table"
 
-    name = fields.Char(string="Medicamento",required=True)
+    # === Datos básicos ===
+    name = fields.Char(string="Medicamento", required=True)
     description = fields.Text(string="Descripción")
+
+    # === Presentación genérica (caja -> pack/blíster/botella -> unidad) ===
+    packs_per_box = fields.Integer(
+        string="Packs por caja",
+        default=1,
+        help="Cantidad de packs/blísteres/botellas por caja."
+    )
+    units_per_pack = fields.Float(
+        string="Unidades por pack",
+        default=1.0,
+        help="Unidades por pack/blíster/botella (por ejemplo: tabletas por blíster, mL por frasco)."
+    )
+    packaging_notes = fields.Text(
+        string="Notas de presentación",
+        help="Notas sobre presentación (p.ej. mL por frasco, tabletas por blíster), equivalencias y uso."
+    )
+
+    # === Stock por presentación (editable) ===
+    stock_boxes = fields.Integer(string="Stock (cajas)", default=0, tracking=True)
+    stock_packs = fields.Integer(string="Stock (packs sueltos)", default=0, tracking=True)
+    stock_units = fields.Float(string="Stock (unidades sueltas)", default=0.0, tracking=True)
+
+    # === Totales (lectura) ===
+    stock_total_units = fields.Float(
+        string="Stock total (unidades)",
+        compute="_compute_stock_total_units",
+        store=True,
+        help="Total de unidades considerando cajas, packs y sueltas."
+    )
+
+    @api.depends('stock_boxes', 'stock_packs', 'stock_units', 'packs_per_box', 'units_per_pack')
+    def _compute_stock_total_units(self):
+        for rec in self:
+            ppb = max(rec.packs_per_box or 0, 0)
+            upp = float(rec.units_per_pack or 0.0)
+            total = (rec.stock_boxes or 0) * ppb * upp
+            total += (rec.stock_packs or 0) * upp
+            total += float(rec.stock_units or 0.0)
+            rec.stock_total_units = total
+
+    @api.constrains('packs_per_box', 'units_per_pack', 'stock_boxes', 'stock_packs', 'stock_units')
+    def _check_non_negative(self):
+        for rec in self:
+            if rec.packs_per_box and rec.packs_per_box < 1:
+                raise UserError(_("El campo 'Packs por caja' debe ser mayor o igual a 1."))
+            if rec.units_per_pack and rec.units_per_pack <= 0:
+                raise UserError(_("El campo 'Unidades por pack' debe ser mayor que 0."))
+            if rec.stock_boxes is not None and rec.stock_boxes < 0:
+                raise UserError(_("El stock de cajas no puede ser negativo."))
+            if rec.stock_packs is not None and rec.stock_packs < 0:
+                raise UserError(_("El stock de packs no puede ser negativo."))
+            if rec.stock_units is not None and rec.stock_units < 0:
+                raise UserError(_("El stock de unidades sueltas no puede ser negativo."))
+
+    # === Helpers de fraccionamiento ===
+    def _ensure_enough_units(self, units_needed):
+        self.ensure_one()
+        if units_needed <= 0:
+            return
+        if (self.stock_total_units or 0.0) < units_needed:
+            raise UserError(_(
+                "Stock insuficiente del medicamento '%s'. Unidades requeridas: %.2f, disponibles: %.2f"
+            ) % (self.name, units_needed, self.stock_total_units or 0.0))
+
+    def _break_pack_to_units(self, how_many_packs=1):
+        self.ensure_one()
+        if how_many_packs <= 0:
+            return
+        if (self.stock_packs or 0) < how_many_packs:
+            raise UserError(_("No hay packs suficientes para fraccionar."))
+        self.stock_packs -= how_many_packs
+        self.stock_units += float(how_many_packs) * float(self.units_per_pack or 0)
+
+    def _break_box_to_packs(self, how_many_boxes=1):
+        self.ensure_one()
+        if how_many_boxes <= 0:
+            return
+        if (self.stock_boxes or 0) < how_many_boxes:
+            raise UserError(_("No hay cajas suficientes para fraccionar."))
+        self.stock_boxes -= how_many_boxes
+        self.stock_packs += int(how_many_boxes) * int(self.packs_per_box or 0)
+
+    def _consume_units(self, units):
+        """
+        Consume 'units' unidades del stock, fraccionando según sea necesario:
+        primero sueltas, luego packs, luego cajas.
+        """
+        self.ensure_one()
+        if not units or units <= 0:
+            return
+
+        self._ensure_enough_units(units)
+
+        deficit = units - (self.stock_units or 0.0)
+        while deficit > 0:
+            if (self.stock_packs or 0) > 0:
+                self._break_pack_to_units(1)
+            elif (self.stock_boxes or 0) > 0:
+                self._break_box_to_packs(1)
+            else:
+                raise UserError(_("No hay stock suficiente para fraccionar en unidades."))
+            deficit = units - (self.stock_units or 0.0)
+
+        self.stock_units -= units
+
+    def _revert_units(self, units):
+        """
+        Devuelve 'units' al stock como unidades sueltas.
+        """
+        self.ensure_one()
+        if not units or units <= 0:
+            return
+        self.stock_units += units
+
+
+class Medication(models.Model):
+    """
+    Registro de administración/asignación de medicamentos por animal.
+    Descuenta stock del medicamento (opcional).
+    """
+    _name = "animal.medication"
+    _description = "Registro de medicaciones por animal"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = "date desc, id desc"
+
+    # Enlaces
+    animal_id = fields.Many2one(
+        "animal",
+        string="Animal",
+        required=True,
+        ondelete="cascade",
+        index=True,
+        tracking=True
+    )
+    medicine_id = fields.Many2one(
+        "animal.medicine",
+        string="Medicamento",
+        required=True,
+        ondelete="restrict",
+        tracking=True
+    )
+
+    # Datos
+    date = fields.Datetime(
+        string="Fecha",
+        required=True,
+        default=fields.Datetime.now,
+        tracking=True
+    )
+    doctor = fields.Char(string="Dr/Dra", tracking=True)
+    notes = fields.Text(string="Notas/Observaciones")
+
+    # Consumo (en UNIDADES del medicamento)
+    quantity_units = fields.Float(
+        string="Cantidad (unidades)",
+        default=1.0,
+        tracking=True,
+        help="Cantidad a descontar en unidades base del medicamento (p.ej. mL, tabletas)."
+    )
+    lot_number = fields.Char(string="Lote / Serie")
+    lot_expiration = fields.Date(string="Vencimiento (lote)")
+
+    consume_stock = fields.Boolean(
+        string="Descontar stock",
+        default=True,
+        help="Si está activado, al guardar se descuenta 'Cantidad (unidades)' del stock del medicamento."
+    )
+
+    # Lectura
+    owner_id = fields.Many2one(
+        related="animal_id.owner",
+        string="Dueño",
+        store=True,
+        readonly=True
+    )
+    specie_id = fields.Many2one(
+        related="animal_id.species",
+        string="Especie",
+        store=True,
+        readonly=True
+    )
+
+    @api.onchange('animal_id')
+    def _onchange_animal_id_prefill_doctor(self):
+        for rec in self:
+            if rec.animal_id and rec.animal_id.treating_doctor and not rec.doctor:
+                rec.doctor = rec.animal_id.treating_doctor
+
+    def name_get(self):
+        res = []
+        for rec in self:
+            label = "%s" % (rec.medicine_id.name if rec.medicine_id else "Medicación")
+            if rec.date:
+                label += " - %s" % fields.Datetime.to_string(rec.date)
+            res.append((rec.id, label))
+        return res
+
+    _sql_constraints = [
+        ('positive_units', 'CHECK(quantity_units >= 0)', 'La cantidad (unidades) debe ser mayor o igual a 0.')
+    ]
+
+    # === Movimiento de stock ===
+    @api.model
+    def create(self, vals):
+        records = super().create(vals)
+        for rec in records:
+            if rec.consume_stock and rec.medicine_id and rec.quantity_units:
+                rec.medicine_id._consume_units(rec.quantity_units)
+        return records
+
+    def write(self, vals):
+        before = {rec.id: {
+            'medicine_id': rec.medicine_id.id,
+            'quantity_units': float(rec.quantity_units or 0.0),
+            'consume_stock': bool(rec.consume_stock),
+        } for rec in self}
+
+        res = super().write(vals)
+
+        for rec in self:
+            prev = before[rec.id]
+            prev_med = prev['medicine_id'] and self.env['animal.medicine'].browse(prev['medicine_id']) or False
+            prev_qty = prev['quantity_units']
+            prev_consume = prev['consume_stock']
+
+            new_med = rec.medicine_id
+            new_qty = float(rec.quantity_units or 0.0)
+            new_consume = bool(rec.consume_stock)
+
+            # 1) Antes consumía y ahora NO -> revertir prev_qty en prev_med
+            if prev_consume and not new_consume and prev_med and prev_qty:
+                prev_med._revert_units(prev_qty)
+
+            # 2) Antes NO y ahora SÍ -> consumir new_qty en new_med
+            elif not prev_consume and new_consume and new_med and new_qty:
+                new_med._consume_units(new_qty)
+
+            # 3) Sigue consumiendo
+            elif prev_consume and new_consume:
+                if prev_med and new_med and prev_med.id != new_med.id:
+                    if prev_qty:
+                        prev_med._revert_units(prev_qty)
+                    if new_qty:
+                        new_med._consume_units(new_qty)
+                else:
+                    delta = new_qty - prev_qty
+                    if delta > 0:
+                        new_med._consume_units(delta)
+                    elif delta < 0:
+                        new_med._revert_units(-delta)
+
+        return res
+
+    def unlink(self):
+        for rec in self:
+            if rec.consume_stock and rec.medicine_id and rec.quantity_units:
+                rec.medicine_id._revert_units(rec.quantity_units)
+        return super().unlink()
 
 
 === ./models/allergies.py ===
@@ -2896,7 +3371,7 @@ Manage the animals that visit our veterinarian
         # Vistas de Órdenes de Exámenes
         'views/exam_orders_views.xml',
 
-        # === EXISTENTE: Vistas de REGISTROS de Vacunación ===
+        # === EXISTENTE: Vistas de REGISTROS de Vacunación (actualizadas con dosis/lote) ===
         'views/vaccinations_views.xml',
 
         # === EXISTENTE: Catálogo y REGISTROS de Desparasitación ===
@@ -2991,6 +3466,7 @@ access_animal_dewormer,animal.dewormer,model_animal_dewormer,base.group_user,1,1
 access_animal_deworming,animal.deworming,model_animal_deworming,base.group_user,1,1,1,1
 access_animal_consent,animal.consent,model_animal_consent,base.group_user,1,1,1,1
 access_vet_waiting_ticket,vet.waiting.ticket,model_vet_waiting_ticket,base.group_user,1,1,1,1
+access_animal_medication,animal.medication,model_animal_medication,base.group_user,1,1,1,1
 
 === ./controllers/__init__.py ===
 # -*- coding: utf-8 -*-
@@ -3237,24 +3713,62 @@ from . import controllers
                 </field>
               </page>
 
+              <!-- ======== MEDICAMENTOS (catálogo rápido) + MEDICACIONES (registros) ======== -->
               <page string="Medicamentos">
-                <field name="medicines" />
+                <group string="Catálogo asociado (tags rápidos)">
+                  <field name="medicines" widget="many2many_tags"/>
+                </group>
+
+                <group string="Registros de medicación">
+                  <field name="medication_ids" context="{'default_animal_id': active_id}">
+                    <tree editable="bottom">
+                      <field name="date"/>
+                      <field name="medicine_id"/>
+                      <field name="quantity_units" string="Cantidad (unidades)"/>
+                      <field name="doctor" string="Dr/Dra"/>
+                      <field name="consume_stock"/>
+                      <field name="lot_number"/>
+                      <field name="lot_expiration"/>
+                      <field name="notes"/>
+                    </tree>
+                    <form>
+                      <group>
+                        <group string="Datos del Animal">
+                          <field name="animal_id"/>
+                          <field name="owner_id" readonly="1"/>
+                          <field name="specie_id" readonly="1"/>
+                        </group>
+                        <group string="Medicación">
+                          <field name="medicine_id"/>
+                          <field name="quantity_units" string="Cantidad (unidades)"/>
+                          <field name="consume_stock"/>
+                          <field name="date"/>
+                          <field name="doctor"/>
+                        </group>
+                      </group>
+                      <group string="Lote / Observaciones">
+                        <field name="lot_number"/>
+                        <field name="lot_expiration"/>
+                        <field name="notes"/>
+                      </group>
+                    </form>
+                  </field>
+                </group>
               </page>
 
-              <!-- ======== VACUNAS (MODIFICADO) ======== -->
+              <!-- ======== VACUNAS (con detalles de dosis/lote) ======== -->
               <page string="Vacunas">
-                <!--
-                  Reemplazamos el campo Many2many 'vaccines' por un One2many
-                  'vaccination_ids', donde se registran los detalles:
-                  fecha, vía, doctor y próxima vacunación.
-                -->
                 <field name="vaccination_ids" context="{'default_animal_id': active_id}">
                   <tree editable="bottom">
                     <field name="vaccine_id"/>
                     <field name="date"/>
+                    <field name="applied_doses" string="Dosis aplicadas"/>
                     <field name="route"/>
                     <field name="doctor" string="Dr/Dra"/>
                     <field name="next_date"/>
+                    <field name="consume_stock"/>
+                    <field name="lot_number"/>
+                    <field name="lot_expiration"/>
                     <field name="notes"/>
                   </tree>
                   <form>
@@ -3262,27 +3776,33 @@ from . import controllers
                       <group>
                         <field name="vaccine_id"/>
                         <field name="date"/>
+                        <field name="applied_doses" string="Dosis aplicadas"/>
                       </group>
                       <group>
                         <field name="route"/>
                         <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional"/>
+                        <field name="consume_stock"/>
                       </group>
                       <group>
                         <field name="next_date"/>
                         <field name="owner_id" readonly="1"/>
+                        <field name="specie_id" readonly="1"/>
+                      </group>
+                      <group string="Lote">
+                        <field name="lot_number"/>
+                        <field name="lot_expiration"/>
                       </group>
                       <field name="notes" placeholder="Observaciones adicionales..."/>
                     </group>
                   </form>
                 </field>
 
-                <!-- Opcional (solo lectura): listado de vacunas aplicadas (únicas) -->
                 <group string="Resumen de vacunas aplicadas (solo lectura)">
                   <field name="vaccines" widget="many2many_tags" options="{'no_create': True, 'no_create_edit': True, 'no_open': True}" readonly="1"/>
                 </group>
               </page>
 
-              <!-- ======== DESPARASITACIONES (NUEVA PESTAÑA) ======== -->
+              <!-- ======== DESPARASITACIONES ======== -->
               <page string="Desparasitaciones">
                 <field name="deworming_ids" context="{'default_animal_id': active_id}">
                   <tree editable="bottom">
@@ -3350,7 +3870,6 @@ from . import controllers
                   </group>
                 </group>
                 <group>
-                  <!-- Eliminado el campo Altura y su unidad -->
                   <group>
                     <field name="tags" string="Color" widget="many2many_tags" options="{'color_field': 'color'}" />
                   </group>
@@ -3416,6 +3935,7 @@ from . import controllers
   </data>
 </odoo>
 
+
 === ./views/waiting_room_sequence.xml ===
 <odoo>
   <data noupdate="1">
@@ -3448,13 +3968,66 @@ from . import controllers
 <odoo>
     <data>
 
+        <!-- === TREE === -->
+        <record id="vaccine_tree_view" model="ir.ui.view">
+            <field name="name">animal.vaccine.tree.view</field>
+            <field name="model">animal.vaccine</field>
+            <field name="arch" type="xml">
+                <tree string="Vacunas">
+                    <field name="name"/>
+                    <field name="vials_per_box"/>
+                    <field name="doses_per_vial"/>
+                    <field name="stock_boxes"/>
+                    <field name="stock_vials"/>
+                    <field name="stock_doses"/>
+                    <field name="stock_total_doses" readonly="1"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- === FORM === -->
+        <record id="vaccine_form_view" model="ir.ui.view">
+            <field name="name">animal.vaccine.form.view</field>
+            <field name="model">animal.vaccine</field>
+            <field name="arch" type="xml">
+                <form string="Vacuna">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="name"/>
+                                <field name="description"/>
+                            </group>
+                            <group string="Presentación">
+                                <field name="vials_per_box"/>
+                                <field name="doses_per_vial"/>
+                                <field name="packaging_notes"/>
+                            </group>
+                        </group>
+                        <group string="Stock">
+                            <group>
+                                <field name="stock_boxes"/>
+                                <field name="stock_vials"/>
+                                <field name="stock_doses"/>
+                            </group>
+                            <group>
+                                <field name="stock_total_doses" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- === ACTION === -->
         <record id="vaccine_action" model="ir.actions.act_window">
             <field name="name">Vacunas</field>
             <field name="res_model">animal.vaccine</field>
             <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="vaccine_tree_view"/>
         </record>
     </data>
 </odoo>
+
 
 === ./views/animals_menus.xml ===
 <?xml version="1.0" encoding="utf-8"?>
@@ -3533,7 +4106,7 @@ from . import controllers
             sequence="4"
         />
 
-        <!-- Contenedor: Gestión Médica (se puede dejar sin action si prefieres que sea solo contenedor) -->
+        <!-- Contenedor: Gestión Médica -->
         <menuitem
             id="menu_medical_management"
             name="Gestión Médica"
@@ -3577,6 +4150,14 @@ from . import controllers
             name="Registros de Vacunación"
             parent="menu_medical_management"
             action="vaccination_action"
+        />
+
+        <!-- *** NUEVO: REGISTROS de MEDICACIÓN *** -->
+        <menuitem
+            id="menu_medications_list"
+            name="Registros de Medicación"
+            parent="menu_medical_management"
+            action="medication_action"
         />
 
         <!-- *** NUEVO: CONSENTIMIENTOS *** -->
@@ -3656,6 +4237,7 @@ from . import controllers
         />
     </data>
 </odoo>
+
 
 === ./views/exam_orders_views.xml ===
 <?xml version="1.0" encoding="utf-8"?>
@@ -3835,6 +4417,9 @@ from . import controllers
           <field name="next_date" string="Próxima vacunación"/>
           <field name="route" string="Vía"/>
           <field name="doctor" string="Dr/Dra"/>
+          <field name="applied_doses" string="Dosis aplicadas"/>
+          <field name="lot_number" string="Lote"/>
+          <field name="lot_expiration" string="Vencimiento"/>
           <field name="notes" string="Notas/Observaciones"/>
 
           <group expand="0" string="Agrupar por">
@@ -3861,9 +4446,13 @@ from . import controllers
           <field name="owner_id" string="Dueño"/>
           <field name="specie_id" string="Especie"/>
           <field name="vaccine_id" string="Vacuna"/>
+          <field name="applied_doses" string="Dosis"/>
           <field name="route" string="Vía"/>
           <field name="doctor" string="Dr/Dra"/>
           <field name="next_date" string="Próx. vacunación"/>
+          <field name="consume_stock" string="Desc. stock"/>
+          <field name="lot_number" string="Lote"/>
+          <field name="lot_expiration" string="Vencimiento"/>
           <field name="notes" string="Notas"/>
         </tree>
       </field>
@@ -3893,12 +4482,17 @@ from . import controllers
               <group string="Vacunación">
                 <field name="vaccine_id" required="1"/>
                 <field name="date" required="1"/>
+                <field name="applied_doses" string="Dosis aplicadas"/>
+                <field name="consume_stock"/>
                 <field name="route"/>
                 <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional"/>
                 <field name="next_date" string="Próxima vacunación"/>
               </group>
             </group>
-            <group>
+
+            <group string="Lote / Observaciones">
+              <field name="lot_number"/>
+              <field name="lot_expiration"/>
               <field name="notes" placeholder="Notas u observaciones clínicas..."/>
             </group>
           </sheet>
@@ -3920,6 +4514,7 @@ from . import controllers
 
   </data>
 </odoo>
+
 
 === ./views/visit_sequence.xml ===
 <odoo>
@@ -4129,11 +4724,175 @@ from . import controllers
 <odoo>
     <data>
 
+        <!-- === SEARCH (catálogo) === -->
+        <record id="medicine_search_view" model="ir.ui.view">
+            <field name="name">animal.medicine.search.view</field>
+            <field name="model">animal.medicine</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name" string="Medicamento"/>
+                    <field name="description" string="Descripción"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter name="grp_name" string="Nombre" context="{'group_by':'name'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- === TREE (catálogo) === -->
+        <record id="medicine_tree_view" model="ir.ui.view">
+            <field name="name">animal.medicine.tree.view</field>
+            <field name="model">animal.medicine</field>
+            <field name="arch" type="xml">
+                <tree string="Medicamentos">
+                    <field name="name"/>
+                    <field name="packs_per_box"/>
+                    <field name="units_per_pack"/>
+                    <field name="stock_boxes"/>
+                    <field name="stock_packs"/>
+                    <field name="stock_units"/>
+                    <field name="stock_total_units" readonly="1"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- === FORM (catálogo) === -->
+        <record id="medicine_form_view" model="ir.ui.view">
+            <field name="name">animal.medicine.form.view</field>
+            <field name="model">animal.medicine</field>
+            <field name="arch" type="xml">
+                <form string="Medicamento">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="name"/>
+                                <field name="description"/>
+                            </group>
+                            <group string="Presentación">
+                                <field name="packs_per_box"/>
+                                <field name="units_per_pack"/>
+                                <field name="packaging_notes"/>
+                            </group>
+                        </group>
+                        <group string="Stock">
+                            <group>
+                                <field name="stock_boxes"/>
+                                <field name="stock_packs"/>
+                                <field name="stock_units"/>
+                            </group>
+                            <group>
+                                <field name="stock_total_units" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- === ACTION (catálogo) === -->
         <record id="medicine_action" model="ir.actions.act_window">
             <field name="name">Medicamentos</field>
             <field name="res_model">animal.medicine</field>
-            <field name="view_mode">tree,form</field>
+            <field name="view_mode">search,tree,form</field>
+            <field name="view_id" ref="medicine_tree_view"/>
         </record>
+
+        <!-- ===================================================== -->
+        <!-- ============ REGISTROS DE MEDICACIÓN ================ -->
+        <!-- ===================================================== -->
+
+        <!-- Search -->
+        <record id="medication_search_view" model="ir.ui.view">
+            <field name="name">animal.medication.search.view</field>
+            <field name="model">animal.medication</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="animal_id" string="Animal"/>
+                    <field name="owner_id" string="Dueño"/>
+                    <field name="specie_id" string="Especie"/>
+                    <field name="medicine_id" string="Medicamento"/>
+                    <field name="date" string="Fecha"/>
+                    <field name="doctor" string="Dr/Dra"/>
+                    <field name="notes" string="Notas"/>
+                    <field name="quantity_units" string="Cantidad (unidades)"/>
+                    <field name="lot_number" string="Lote"/>
+                    <field name="lot_expiration" string="Vencimiento"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter name="grp_animal" string="Animal" context="{'group_by':'animal_id'}"/>
+                        <filter name="grp_owner" string="Dueño" context="{'group_by':'owner_id'}"/>
+                        <filter name="grp_specie" string="Especie" context="{'group_by':'specie_id'}"/>
+                        <filter name="grp_medicine" string="Medicamento" context="{'group_by':'medicine_id'}"/>
+                        <filter name="grp_doctor" string="Dr/Dra" context="{'group_by':'doctor'}"/>
+                        <filter name="grp_date" string="Fecha" context="{'group_by':'date:month'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Tree -->
+        <record id="medication_tree_view" model="ir.ui.view">
+            <field name="name">animal.medication.tree.view</field>
+            <field name="model">animal.medication</field>
+            <field name="arch" type="xml">
+                <tree string="Registros de Medicación">
+                    <field name="date"/>
+                    <field name="animal_id"/>
+                    <field name="owner_id"/>
+                    <field name="specie_id"/>
+                    <field name="medicine_id"/>
+                    <field name="quantity_units"/>
+                    <field name="doctor"/>
+                    <field name="consume_stock"/>
+                    <field name="lot_number"/>
+                    <field name="lot_expiration"/>
+                    <field name="notes"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Form -->
+        <record id="medication_form_view" model="ir.ui.view">
+            <field name="name">animal.medication.form.view</field>
+            <field name="model">animal.medication</field>
+            <field name="arch" type="xml">
+                <form string="Registro de Medicación">
+                    <sheet>
+                        <group>
+                            <group string="Datos del Animal">
+                                <field name="animal_id" required="1"/>
+                                <field name="owner_id" readonly="1"/>
+                                <field name="specie_id" readonly="1"/>
+                            </group>
+                            <group string="Medicación">
+                                <field name="medicine_id" required="1"/>
+                                <field name="quantity_units" required="1"/>
+                                <field name="consume_stock"/>
+                                <field name="date" required="1"/>
+                                <field name="doctor" string="Dr/Dra"/>
+                            </group>
+                        </group>
+                        <group string="Lote / Observaciones">
+                            <field name="lot_number"/>
+                            <field name="lot_expiration"/>
+                            <field name="notes"/>
+                        </group>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field widget="mail_thread" name="message_ids"/>
+                        <field widget="mail_activity" name="activity_ids"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+        <!-- Action (registros) -->
+        <record id="medication_action" model="ir.actions.act_window">
+            <field name="name">Registros de Medicación</field>
+            <field name="res_model">animal.medication</field>
+            <field name="view_mode">search,tree,form,kanban</field>
+        </record>
+
     </data>
 </odoo>
 
@@ -4492,6 +5251,7 @@ from . import controllers
           <field name="doctor" string="Dr/Dra"/>
           <field name="room" string="Box"/>
           <field name="reason" string="Motivo"/>
+
           <group expand="0" string="Agrupar por">
             <filter name="grp_state" string="Estado" context="{'group_by':'state'}"/>
             <filter name="grp_priority" string="Prioridad" context="{'group_by':'priority'}"/>
@@ -4536,68 +5296,87 @@ from . import controllers
       <field name="arch" type="xml">
         <form string="Ticket Sala de Espera">
           <header>
-            <button name="action_call" type="object" class="btn-primary" string="Llamar"
+            <!-- Odoo 17: usar invisibility con expresiones en lugar de 'states' / 'attrs' -->
+            <button name="action_call"
+                    type="object"
+                    class="btn-primary"
+                    string="Llamar"
                     invisible="not (state in ('waiting','paused'))"/>
-            <button name="action_start_consultation" type="object" class="btn-primary" string="Iniciar atención"
+            <button name="action_start_consultation"
+                    type="object"
+                    class="btn-primary"
+                    string="Iniciar atención"
                     invisible="not (state in ('waiting','called','paused'))"/>
-            <button name="action_pause" type="object" class="btn-secondary" string="Pausar"
+            <button name="action_pause"
+                    type="object"
+                    class="btn-secondary"
+                    string="Pausar"
                     invisible="state != 'in_consultation'"/>
-            <button name="action_resume" type="object" class="btn-secondary" string="Reanudar"
+            <button name="action_resume"
+                    type="object"
+                    class="btn-secondary"
+                    string="Reanudar"
                     invisible="state != 'paused'"/>
-            <button name="action_open_visit" type="object" class="btn-secondary" string="Abrir visita"
+            <button name="action_open_visit"
+                    type="object"
+                    class="btn-secondary"
+                    string="Abrir visita"
                     invisible="not visit_id"/>
-            <button name="action_done" type="object" class="btn-success" string="Finalizar"
+            <button name="action_done"
+                    type="object"
+                    class="btn-primary"
+                    string="Finalizar"
                     invisible="not (state in ('in_consultation','called','paused'))"/>
-            <button name="action_cancel" type="object" string="Cancelar"
+            <button name="action_cancel"
+                    type="object"
+                    string="Cancelar"
                     invisible="state in ('done','cancelled')"/>
-            <button name="action_reset_to_waiting" type="object" string="Reiniciar a espera"
-                    invisible="not (state in ('done','cancelled'))"/>
+            <button name="action_reset_to_waiting"
+                    type="object"
+                    string="Volver a En espera"
+                    invisible="state == 'waiting'"/>
 
-            <field name="state" widget="statusbar"
+            <field name="state"
+                   widget="statusbar"
                    statusbar_visible="waiting,called,in_consultation,paused,done,cancelled"/>
           </header>
 
           <sheet>
             <group>
-              <group>
-                <field class="fs-1" name="sequence" readonly="1"/>
-                <field name="arrival_time" required="1"/>
+              <group string="Ticket">
+                <field name="sequence" readonly="1"/>
                 <field name="priority"/>
-                <field name="waiting_minutes" readonly="1"/>
+                <field name="room" string="Box"/>
+                <field name="doctor" string="Dr/Dra asignado/a"/>
               </group>
-              <group>
-                <field name="animal_id" options="{'no_open': False, 'no_create_edit': False}" required="1"/>
+              <group string="Paciente">
+                <field name="animal_id" required="1"/>
                 <field name="owner_id" readonly="1"/>
-                <field name="doctor" placeholder="Nombre del profesional"/>
-                <field name="room"/>
-              </group>
-            </group>
-
-            <group>
-              <group string="Paciente (solo lectura)">
                 <field name="specie_id" readonly="1"/>
                 <field name="breed_id" readonly="1"/>
                 <field name="sex" readonly="1"/>
                 <field name="microchip_number" readonly="1"/>
               </group>
-              <group string="Motivo y notas">
-                <field name="reason" placeholder="Describa brevemente el motivo de la consulta..."/>
-                <field name="notes" placeholder="Notas internas del mostrador/triage..."/>
+            </group>
+
+            <group>
+              <group string="Tiempos">
+                <field name="arrival_time" required="1"/>
+                <field name="called_time" readonly="1"/>
+                <field name="start_time" readonly="1"/>
+                <field name="end_time" readonly="1"/>
+                <field name="waiting_minutes" readonly="1"/>
+              </group>
+              <group string="Visita vinculada">
+                <field name="visit_id" readonly="1"/>
+                <field name="state" readonly="1"/>
               </group>
             </group>
 
-            <group string="Tiempos">
-              <field name="called_time" readonly="1"/>
-              <field name="start_time" readonly="1"/>
-              <field name="end_time" readonly="1"/>
+            <group string="Motivo / Notas">
+              <field name="reason"/>
+              <field name="notes"/>
             </group>
-
-            <div class="oe_button_box" name="button_box">
-              <button name="action_open_visit" type="object" class="oe_stat_button" icon="fa-stethoscope"
-                      attrs="{'invisible': [('visit_id','=',False)]}">
-                <field name="visit_id" widget="statinfo" string="Visita"/>
-              </button>
-            </div>
           </sheet>
 
           <div class="oe_chatter">
@@ -4608,135 +5387,51 @@ from . import controllers
       </field>
     </record>
 
-    <!-- ===== Kanban ===== -->
-    <record id="waiting_ticket_kanban_view" model="ir.ui.view">
-      <field name="name">vet.waiting.ticket.kanban.view</field>
-      <field name="model">vet.waiting.ticket</field>
-      <field name="arch" type="xml">
-        <kanban class="o_kanban_mobile" sample="1" default_group_by="state">
-          <templates>
-            <t t-name="kanban-box">
-              <div t-attf-class="oe_kanban_global_click">
-                <div class="o_kanban_record_top">
-                  <div class="o_kanban_record_headings d-flex justify-content-between">
-                    <strong><field name="sequence"/></strong>
-                    <div>
-                      <span class="badge" t-attf-style="background:#e0e0e0;">Min: <field name="waiting_minutes"/></span>
-                      <span class="badge">
-                        <t t-if="record.priority.raw_value == '3'">Emergencia</t>
-                        <t t-elif="record.priority.raw_value == '2'">Alta</t>
-                        <t t-elif="record.priority.raw_value == '1'">Normal</t>
-                        <t t-else="">Baja</t>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div class="o_kanban_record_body">
-                  <div><strong>Animal:</strong> <field name="animal_id"/></div>
-                  <div><strong>Dueño:</strong> <field name="owner_id"/></div>
-                  <div class="mt-1"><strong>Motivo:</strong> <field name="reason"/></div>
-                </div>
-                <div class="o_kanban_record_bottom d-flex justify-content-between align-items-center mt-2">
-                  <div>
-                    <t t-if="record.state.raw_value == 'waiting' or record.state.raw_value == 'paused'">
-                      <button type="object" name="action_call" class="btn btn-primary btn-sm">Llamar</button>
-                    </t>
-                    <t t-if="record.state.raw_value in ('waiting','called','paused')">
-                      <button type="object" name="action_start_consultation" class="btn btn-primary btn-sm">Iniciar</button>
-                    </t>
-                    <t t-if="record.state.raw_value == 'in_consultation'">
-                      <button type="object" name="action_pause" class="btn btn-secondary btn-sm">Pausar</button>
-                      <button type="object" name="action_done" class="btn btn-success btn-sm">Finalizar</button>
-                    </t>
-                    <t t-if="record.state.raw_value == 'paused'">
-                      <button type="object" name="action_resume" class="btn btn-secondary btn-sm">Reanudar</button>
-                    </t>
-                  </div>
-                  <div>
-                    <t t-if="record.visit_id.value">
-                      <button type="object" name="action_open_visit" class="btn btn-light btn-sm">Visita</button>
-                    </t>
-                  </div>
-                </div>
-              </div>
-            </t>
-          </templates>
-        </kanban>
-      </field>
-    </record>
-
     <!-- ===== Actions ===== -->
     <record id="waiting_ticket_action" model="ir.actions.act_window">
       <field name="name">Tickets</field>
       <field name="res_model">vet.waiting.ticket</field>
-      <field name="view_mode">search,kanban,tree,form,activity</field>
-      <field name="context">{}</field>
+      <field name="view_mode">search,tree,form,kanban</field>
     </record>
 
     <record id="waiting_ticket_waiting_action" model="ir.actions.act_window">
-      <field name="name">Tickets en espera</field>
+      <field name="name">Tickets - En espera</field>
       <field name="res_model">vet.waiting.ticket</field>
-      <field name="view_mode">search,kanban,tree,form</field>
+      <field name="view_mode">search,tree,form,kanban</field>
       <field name="domain">[('state','=','waiting')]</field>
     </record>
 
     <record id="waiting_ticket_in_consultation_action" model="ir.actions.act_window">
-      <field name="name">En consulta</field>
+      <field name="name">Tickets - En consulta</field>
       <field name="res_model">vet.waiting.ticket</field>
-      <field name="view_mode">search,kanban,tree,form</field>
+      <field name="view_mode">search,tree,form,kanban</field>
       <field name="domain">[('state','=','in_consultation')]</field>
     </record>
 
     <record id="waiting_ticket_done_action" model="ir.actions.act_window">
-      <field name="name">Atendidos</field>
+      <field name="name">Tickets - Atendidos</field>
       <field name="res_model">vet.waiting.ticket</field>
       <field name="view_mode">search,tree,form,kanban</field>
       <field name="domain">[('state','=','done')]</field>
     </record>
 
     <record id="waiting_ticket_cancelled_action" model="ir.actions.act_window">
-      <field name="name">Cancelados</field>
+      <field name="name">Tickets - Cancelados</field>
       <field name="res_model">vet.waiting.ticket</field>
       <field name="view_mode">search,tree,form,kanban</field>
       <field name="domain">[('state','=','cancelled')]</field>
     </record>
 
-    <!-- ===== Acción de servidor: Llamar siguiente ===== -->
+    <!-- (Opcional) Acción de servidor para 'Llamar siguiente' -->
     <record id="waiting_ticket_call_next_server_action" model="ir.actions.server">
-      <field name="name">Llamar siguiente</field>
+      <field name="name">Llamar siguiente ticket</field>
       <field name="model_id" ref="model_vet_waiting_ticket"/>
-      <field name="binding_model_id" ref="model_vet_waiting_ticket"/>
-      <field name="binding_type">action</field>
       <field name="state">code</field>
-      <field name="code"><![CDATA[
-# Busca el siguiente ticket en espera y lo abre
-next_ticket = env['vet.waiting.ticket'].search([('state','=','waiting')], order='priority desc, arrival_time asc', limit=1)
-if next_ticket:
-    next_ticket.action_call()
-    action = {
-        "type": "ir.actions.act_window",
-        "res_model": "vet.waiting.ticket",
-        "res_id": next_ticket.id,
-        "view_mode": "form",
-        "target": "current",
-    }
-else:
-    action = {
-        "type": "ir.actions.client",
-        "tag": "display_notification",
-        "params": {
-            "title": "Sala de espera",
-            "message": "No hay tickets en espera.",
-            "sticky": False,
-            "type": "warning",
-        }
-    }
-      ]]></field>
+      <field name="code">action = env['vet.waiting.ticket'].action_call_next()</field>
     </record>
 
   </data>
 </odoo>
-
 
 === ./views/animal_partner_views.xml ===
 <odoo>

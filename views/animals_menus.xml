@@ -203,5 +203,11 @@
             action="tag_action"
             sequence="3"
         />
+        <menuitem
+            id="menu_prescriptions_list"
+            name="Recetas"
+            parent="menu_medical_management"
+            action="prescription_action"
+        />
     </data>
 </odoo>

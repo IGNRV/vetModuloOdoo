@@ -25,10 +25,11 @@ Manage the animals that visit our veterinarian
         'report/sterilization_report.xml',
         'report/visit_report.xml',
         'report/exam_order_report.xml',
-        # === EXISTENTE: Reporte PDF de Vacunación ===
+        # EXISTENTE
         'report/vaccination_report.xml',
-        # === NUEVO: Reporte PDF de Consentimientos ===
         'report/consent_report.xml',
+        # === NUEVO: Reporte de Recetas ===
+        'report/prescription_report.xml',
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -51,19 +52,22 @@ Manage the animals that visit our veterinarian
         # Vistas de Órdenes de Exámenes
         'views/exam_orders_views.xml',
 
-        # === EXISTENTE: Vistas de REGISTROS de Vacunación (actualizadas con dosis/lote) ===
+        # REGISTROS de Vacunación (existente)
         'views/vaccinations_views.xml',
 
-        # === EXISTENTE: Catálogo y REGISTROS de Desparasitación ===
+        # Catálogo y REGISTROS de Desparasitación (existente)
         'views/dewormers_views.xml',
         'views/dewormings_views.xml',
 
-        # === NUEVO: Consentimientos ===
+        # Consentimientos
         'views/consents_views.xml',
 
-        # === NUEVO: Sala de Espera ===
+        # Sala de Espera
         'views/waiting_room_sequence.xml',
         'views/waiting_room_views.xml',
+
+        # === NUEVO: Vistas de Recetas ===
+        'views/prescriptions_views.xml',
 
         # Menús
         'views/animals_menus.xml',
@@ -72,8 +76,9 @@ Manage the animals that visit our veterinarian
         'views/visit_sequence.xml',
         'views/animals_identification.xml',
         'views/exam_order_sequence.xml',
-        # === NUEVO: Secuencia de Consentimientos ===
         'views/consent_sequence.xml',
+        # === NUEVO: Secuencia de Recetas ===
+        'views/prescription_sequence.xml',
     ],
 
     # only loaded in demonstration mode
