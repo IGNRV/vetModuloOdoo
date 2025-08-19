@@ -19,3 +19,5 @@ access_animal_consent,animal.consent,model_animal_consent,base.group_user,1,1,1,
 access_vet_waiting_ticket,vet.waiting.ticket,model_vet_waiting_ticket,base.group_user,1,1,1,1
 access_animal_medication,animal.medication,model_animal_medication,base.group_user,1,1,1,1
 access_animal_prescription,animal.prescription,model_animal_prescription,base.group_user,1,1,1,1
+access_animal_surgery_record,animal.surgery.record,model_animal_surgery_record,base.group_user,1,1,1,1
+access_animal_surgery_med_line,animal.surgery.medication.line,model_animal_surgery_medication_line,base.group_user,1,1,1,1

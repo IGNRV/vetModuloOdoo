@@ -75,7 +75,22 @@ class Animal(models.Model):
 
     diseases = fields.Many2many("animal.disease", string="Enfermedades", relation="animal_disease_rel")
     allergies = fields.Many2many("animal.allergy", string="Alergias", relation="animal_allergy_rel")
-    surgeries = fields.Many2many("animal.surgery", string="Cirugías", relation="animal_surgery_rel")
+
+    # Cirugías: ahora computado desde los registros quirúrgicos
+    surgeries = fields.Many2many(
+        "animal.surgery",
+        string="Cirugías",
+        relation="animal_surgery_rel",
+        compute="_compute_surgeries",
+        store=True,
+        readonly=True,
+    )
+    surgery_record_ids = fields.One2many(
+        "animal.surgery.record",
+        "animal_id",
+        string="Cirugías (registros)"
+    )
+
     visit_ids = fields.One2many('animal.visit', 'animal_id', string='Visitas')
     active = fields.Boolean(string="Activo", default=True)
     tags = fields.Many2many("animal.tag", string="Etiquetas", relation="animal_tag_rel")
@@ -110,6 +125,12 @@ class Animal(models.Model):
         for record in self:
             dewormer_ids = record.deworming_ids.mapped('dewormer_id').ids if record.deworming_ids else []
             record.dewormers = [(6, 0, dewormer_ids)]
+
+    @api.depends('surgery_record_ids.surgery_id')
+    def _compute_surgeries(self):
+        for record in self:
+            surgery_ids = record.surgery_record_ids.mapped('surgery_id').ids if record.surgery_record_ids else []
+            record.surgeries = [(6, 0, surgery_ids)]
 
     @api.depends('owner')
     def _compute_quote_count(self):

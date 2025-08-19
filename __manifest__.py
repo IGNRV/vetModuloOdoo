@@ -30,6 +30,8 @@ Manage the animals that visit our veterinarian
         'report/consent_report.xml',
         # === NUEVO: Reporte de Recetas ===
         'report/prescription_report.xml',
+        # === NUEVO: Reporte de Cirugías ===
+        'report/surgery_report.xml',
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -79,6 +81,8 @@ Manage the animals that visit our veterinarian
         'views/consent_sequence.xml',
         # === NUEVO: Secuencia de Recetas ===
         'views/prescription_sequence.xml',
+        # === NUEVO: Secuencia de Cirugías ===
+        'views/surgery_sequence.xml',
     ],
 
     # only loaded in demonstration mode

@@ -142,11 +142,28 @@
             parent="menu_medical_management"
             action="allergy_action"
         />
+
+        <!-- ====== CIRUGÍAS (AMPLIADO) ======
+             Convertimos el ítem previo de "Cirugías" en CONTENEDOR
+             y añadimos dos submenús: Registro y Catálogo. -->
         <menuitem
             id="menu_surgeries_list"
             name="Cirugías"
             parent="menu_medical_management"
-            action="surgery_action"
+        />
+        <menuitem
+            id="menu_vet_surgery_record"
+            name="Registro quirúrgico"
+            parent="menu_surgeries_list"
+            action="action_surgery_record"
+            sequence="10"
+        />
+        <menuitem
+            id="menu_vet_surgery_catalog"
+            name="Catálogo de cirugías"
+            parent="menu_surgeries_list"
+            action="action_surgery_catalog"
+            sequence="20"
         />
 
         <!-- Órdenes de Exámenes -->
