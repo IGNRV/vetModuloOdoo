@@ -286,7 +286,23 @@
               </page>
 
               <page string="Alergias">
-                <field name="allergies" />
+                <field name="allergies" context="{'default_animal_ids': [(4, active_id)]}">
+                  <tree editable="bottom">
+                    <field name="name"/>
+                    <field name="allergy_type"/>
+                    <field name="severity"/>
+                  </tree>
+                  <form>
+                    <group>
+                      <field name="name"/>
+                      <field name="allergy_type"/>
+                      <field name="severity"/>
+                      <field name="description"/>
+                      <field name="symptoms"/>
+                      <field name="treatment"/>
+                    </group>
+                  </form>
+                </field>
               </page>
 
               <page string="Cirugías">
