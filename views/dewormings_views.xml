@@ -12,10 +12,13 @@
           <field name="owner_id" string="Dueño"/>
           <field name="specie_id" string="Especie"/>
           <field name="dewormer_id" string="Desparasitante"/>
-          <field name="date" string="Fecha desparasitación"/>
+          <field name="date" string="Fecha"/>
           <field name="next_date" string="Próxima desparasitación"/>
           <field name="route" string="Vía"/>
           <field name="doctor" string="Dr/Dra"/>
+          <field name="quantity_units" string="Cantidad (unidades)"/>
+          <field name="lot_number" string="Lote"/>
+          <field name="lot_expiration" string="Vencimiento"/>
           <field name="notes" string="Notas/Observaciones"/>
 
           <group expand="0" string="Agrupar por">
@@ -42,9 +45,13 @@
           <field name="owner_id" string="Dueño"/>
           <field name="specie_id" string="Especie"/>
           <field name="dewormer_id" string="Desparasitante"/>
+          <field name="quantity_units"/>
+          <field name="consume_stock"/>
           <field name="route" string="Vía"/>
           <field name="doctor" string="Dr/Dra"/>
           <field name="next_date" string="Próx. desparasitación"/>
+          <field name="lot_number"/>
+          <field name="lot_expiration"/>
           <field name="notes" string="Notas"/>
         </tree>
       </field>
@@ -65,13 +72,17 @@
               </group>
               <group string="Desparasitación">
                 <field name="dewormer_id" required="1"/>
+                <field name="quantity_units" required="1"/>
+                <field name="consume_stock"/>
                 <field name="date" required="1"/>
                 <field name="route"/>
                 <field name="doctor" string="Dr/Dra" placeholder="Nombre del profesional"/>
                 <field name="next_date" string="Próxima desparasitación"/>
               </group>
             </group>
-            <group>
+            <group string="Lote / Observaciones">
+              <field name="lot_number"/>
+              <field name="lot_expiration"/>
               <field name="notes" placeholder="Notas u observaciones clínicas..."/>
             </group>
           </sheet>
