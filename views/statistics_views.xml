@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- Root menu for statistical reports -->
+    <menuitem id="menu_statistics_root" name="Reportes" parent="menu_animals" sequence="90"/>
+
+    <!-- Visit statistics -->
+    <record id="action_visit_statistics" model="ir.actions.act_window">
+      <field name="name">Estadísticas de Visitas</field>
+      <field name="res_model">animal.visit</field>
+      <field name="view_mode">pivot,graph</field>
+    </record>
+    <menuitem id="menu_visit_statistics" name="Visitas" parent="menu_statistics_root" action="action_visit_statistics" sequence="10"/>
+
+    <!-- Vaccination statistics -->
+    <record id="action_vaccination_statistics" model="ir.actions.act_window">
+      <field name="name">Estadísticas de Vacunaciones</field>
+      <field name="res_model">animal.vaccination</field>
+      <field name="view_mode">pivot,graph</field>
+    </record>
+    <menuitem id="menu_vaccination_statistics" name="Vacunaciones" parent="menu_statistics_root" action="action_vaccination_statistics" sequence="20"/>
+
+  </data>
+</odoo>
