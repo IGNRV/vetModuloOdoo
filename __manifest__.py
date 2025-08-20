@@ -73,6 +73,7 @@ Manage the animals that visit our veterinarian
 
         # Menús
         'views/animals_menus.xml',
+        'views/statistics_views.xml',
 
         # Secuencias/otros
         'views/visit_sequence.xml',
