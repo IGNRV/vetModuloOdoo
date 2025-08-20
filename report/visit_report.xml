@@ -204,7 +204,7 @@
             <tr>
               <td class="label">Sexo:</td>
               <td class="val">
-                <t t-esc="({'male':'Masculino','female':'Femenino'}).get(o.animal_id.sex) if o.animal_id else ''"/>
+                <t t-esc="({'male':'Macho','female':'Hembra'}).get(o.animal_id.sex) if o.animal_id else ''"/>
               </td>
               <td class="label">Raza:</td>
               <td class="val">

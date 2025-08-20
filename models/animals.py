@@ -10,8 +10,8 @@ class Animal(models.Model):
 
     name = fields.Char(string="Nombre", required=True)
     sex = fields.Selection([
-        ('male', 'Masculino'),
-        ('female', 'Femenino')
+        ('male', 'Macho'),
+        ('female', 'Hembra')
     ], string="Sexo", default="male")
     birthdate = fields.Date(string="Fecha de Nacimiento")
     # NUEVOS CAMPOS

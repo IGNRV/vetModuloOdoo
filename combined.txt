@@ -432,18 +432,6 @@ class Vaccination(models.Model):
                 rec.vaccine_id._revert_doses(rec.applied_doses)
         return super().unlink()
 
-=== ./models/tag.py ===
-from odoo import models, fields, api
-
-class Tag(models.Model):
-    _name = "animal.tag"
-    _description = "Animal tags table"
-
-    name = fields.Char(string="Etiqueta", required=True)
-    description = fields.Text(string="Descripción")
-    color = fields.Integer(string="Color")
-
-
 === ./models/dewormings.py ===
 from odoo import models, fields, api
 
@@ -829,217 +817,6 @@ class VetWaitingTicket(models.Model):
             'target': 'current',
         }
 
-
-=== ./models/sterilizations.py ===
-from odoo import models, fields, api
-
-
-class Sterilization(models.Model):
-    _name = "animal.sterilization"
-    _description = "Registro de esterilizaciones"
-    _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = "date desc"
-
-    # ========= Enlaces opcionales =========
-    animal_id = fields.Many2one("animal", string="Animal")
-    owner_id = fields.Many2one("res.partner", string="Responsable")
-
-    # ========= Datos responsable =========
-    date = fields.Date(string="Fecha", tracking=True)
-    resp_rut = fields.Char(string="RUT")
-    resp_birthdate = fields.Date(string="Fecha de nacimiento (responsable)")
-    resp_name = fields.Char(string="Nombre")
-    resp_phone1 = fields.Char(string="Teléfono 1")
-    resp_phone2 = fields.Char(string="Teléfono 2")
-    resp_address = fields.Char(string="Dirección")
-    resp_commune = fields.Char(string="Comuna")
-    resp_region = fields.Char(string="Región")
-    resp_email = fields.Char(string="Mail")
-    resp_is_owner = fields.Boolean(string="¿Es dueño/a de la mascota?")
-
-    # ========= Datos Paciente =========
-    patient_name = fields.Char(string="Nombre (paciente)")
-
-    # Antes: 'specie' era Selection. Ahora usamos Many2one a animal.specie.
-    specie_id = fields.Many2one(
-        "animal.specie",
-        string="Especie",
-        ondelete="restrict",
-        tracking=True,
-    )
-
-    # Antes: 'breed_text' era Char. Ahora Many2one a animal.breed, filtrada por especie.
-    breed_id = fields.Many2one(
-        "animal.breed",
-        string="Raza",
-        domain="[('specie', '=', specie_id)]",
-        ondelete="restrict",
-        tracking=True,
-    )
-
-    patient_birthdate = fields.Date(string="Fecha de Nacimiento")
-    sex = fields.Selection([
-        ('macho', 'Macho'),
-        ('hembra', 'Hembra'),
-    ], string="Sexo")
-    color = fields.Char(string="Color")
-    weight = fields.Float(string="Peso (Kg)")
-    pattern = fields.Char(string="Patrón")
-    tenancy_type = fields.Selection([
-        ('con_dueno', 'Con dueño'),
-        ('comunitario', 'Comunitario'),
-        ('sin_dueno', 'Sin dueño'),
-    ], string="Tipo Tenencia")
-    commune_obtention = fields.Char(string="Comuna Obtención")
-    animals_at_home = fields.Integer(string="N° total animales en casa")
-
-    obtention = fields.Selection([
-        ('compra', 'Compra'),
-        ('recogido', 'Recogido'),
-        ('nacio_en_casa', 'Nació en casa'),
-        ('regalo', 'Regalo'),
-        ('adopcion', 'Adopción'),
-        ('na', 'N/A'),
-    ], string="Obtención")
-
-    tenure_reason = fields.Selection([
-        ('asistencia', 'Asistencia'),
-        ('compania', 'Compañía'),
-        ('deporte', 'Deporte'),
-        ('exposicion', 'Exposición'),
-        ('reproduccion', 'Reproducción'),
-        ('seguridad', 'Seguridad'),
-        ('terapia', 'Terapia'),
-        ('trabajo', 'Trabajo'),
-        ('ns', 'N/S'),
-        ('na', 'N/A'),
-        ('otro', 'Otro'),
-    ], string="Razón tenencia")
-    tenure_reason_other = fields.Char(string="Razón tenencia (otro)")
-    already_sterilized = fields.Boolean(string="¿Su mascota ya está esterilizada?")
-    visited_vet_before = fields.Selection([
-        ('si', 'Sí'),
-        ('no', 'No'),
-        ('ns', 'N/S'),
-    ], string="¿Ha asistido antes al Médico Veterinario?")
-    microchip_today = fields.Boolean(string="¿El microchip fue implantado hoy?")
-
-    # ========= Procedimiento =========
-    procedure_type = fields.Selection([
-        ('ovariohisterectomia', 'Ovariohisterectomía'),
-        ('orquiectomia', 'Orquiectomía'),
-    ], string="Procedimiento")
-
-    ovario_approach = fields.Selection([
-        ('linea_alba', 'Línea alba'),
-        ('flanco_izquierdo', 'Flanco izquierdo'),
-        ('flanco_derecho', 'Flanco derecho'),
-        ('mixto', 'Mixto'),
-    ], string="Abordaje (Ovariohisterectomía)")
-
-    orchiectomy_type = fields.Selection([
-        ('pre_escrotal', 'Pre escrotal'),
-        ('escrotal', 'Escrotal'),
-        ('pre_escrotal_inguinal', 'Pre escrotal/inguinal'),
-        ('escrotal_inguinal', 'Escrotal/inguinal'),
-    ], string="Técnica (Orquiectomía)")
-
-    vet_name = fields.Char(string="Nombre M. veterinario/a")
-    vet_rut = fields.Char(string="RUT (médico)")
-    signature = fields.Binary(string="Firma y timbre")
-
-    # ========= Resultado procedimientos =========
-    status = fields.Selection([
-        ('exito', 'Finalizado con éxito'),
-        ('suspendido', 'Suspendido'),
-        ('rechazado', 'Rechazado'),
-        ('fallecido', 'Fallecido'),
-    ], string="Estado")
-    death_cause = fields.Char(string="Causa defunción")
-    death_moment = fields.Selection([
-        ('pre_operatorio', 'Pre operatorio'),
-        ('cirugia', 'Cirugía'),
-        ('post_operatorio', 'Post operatorio'),
-        ('casa', 'Casa'),
-    ], string="Momento de defunción")
-    death_date = fields.Date(string="Fecha defunción")
-
-    # ========= Utilidad / etiquetas =========
-    notes = fields.Text(string="Notas")
-
-    # ====== Al elegir Animal, autocompletar DATOS PACIENTE (y sugerir Responsable) ======
-    @api.onchange('animal_id')
-    def _onchange_animal_id_fill_species_breed(self):
-        """
-        Autocompleta:
-          - patient_name         <- animal.name
-          - specie_id            <- animal.species
-          - breed_id             <- animal.breed (si coincide la especie)
-          - patient_birthdate    <- animal.birthdate
-          - sex                  <- mapea animal.sex (male/female) -> (macho/hembra)
-          - color                <- nombres de animal.tags unidos por coma (si existen)
-          - weight               <- animal.weight
-        Además sugiere:
-          - owner_id             <- animal.owner
-          - already_sterilized   <- True si animal.reproductive_status == 'neutered'
-        """
-        sex_map = {'male': 'macho', 'female': 'hembra'}
-        for rec in self:
-            if not rec.animal_id:
-                # Si se deselecciona el animal, no tocamos los campos existentes.
-                continue
-
-            animal = rec.animal_id
-
-            # Nombre del paciente
-            rec.patient_name = animal.name or False
-
-            # Especie del paciente
-            rec.specie_id = animal.species.id or False
-
-            # Raza: solo si coincide con la especie elegida
-            if animal.breed and (not rec.specie_id or animal.breed.specie.id == rec.specie_id.id):
-                rec.breed_id = animal.breed.id
-            else:
-                rec.breed_id = False
-
-            # Fecha de nacimiento
-            rec.patient_birthdate = animal.birthdate or False
-
-            # Sexo (mapeo)
-            rec.sex = sex_map.get(animal.sex, False)
-
-            # Color (unimos etiquetas por nombre si existen)
-            if animal.tags:
-                rec.color = ", ".join(animal.tags.mapped('name'))
-            else:
-                rec.color = False
-
-            # Peso
-            rec.weight = animal.weight or False
-
-            # Sugerir responsable desde el dueño del animal (si existe)
-            rec.owner_id = animal.owner.id if animal.owner else False
-
-            # Autocompletar si ya está esterilizado (desde estado reproductivo del animal)
-            if animal.reproductive_status:
-                rec.already_sterilized = (animal.reproductive_status == 'neutered')
-            else:
-                rec.already_sterilized = False
-
-
-=== ./models/insurances.py ===
-from odoo import models, fields, api
-
-class Insurance(models.Model):
-    _name = "animal.insurance"
-    _description = "Animals insurances table"
-
-    name = fields.Char(string="Seguro", required=True)
-    characteristics = fields.Text(string="Características")
-    cost = fields.Integer(string="Costo")
-
-
 === ./models/partner_pet.py ===
 from odoo import fields, models, api
 from odoo.exceptions import UserError
@@ -1128,7 +905,22 @@ class Animal(models.Model):
 
     diseases = fields.Many2many("animal.disease", string="Enfermedades", relation="animal_disease_rel")
     allergies = fields.Many2many("animal.allergy", string="Alergias", relation="animal_allergy_rel")
-    surgeries = fields.Many2many("animal.surgery", string="Cirugías", relation="animal_surgery_rel")
+
+    # Cirugías: ahora computado desde los registros quirúrgicos
+    surgeries = fields.Many2many(
+        "animal.surgery",
+        string="Cirugías",
+        relation="animal_surgery_rel",
+        compute="_compute_surgeries",
+        store=True,
+        readonly=True,
+    )
+    surgery_record_ids = fields.One2many(
+        "animal.surgery.record",
+        "animal_id",
+        string="Cirugías (registros)"
+    )
+
     visit_ids = fields.One2many('animal.visit', 'animal_id', string='Visitas')
     active = fields.Boolean(string="Activo", default=True)
     tags = fields.Many2many("animal.tag", string="Etiquetas", relation="animal_tag_rel")
@@ -1163,6 +955,12 @@ class Animal(models.Model):
         for record in self:
             dewormer_ids = record.deworming_ids.mapped('dewormer_id').ids if record.deworming_ids else []
             record.dewormers = [(6, 0, dewormer_ids)]
+
+    @api.depends('surgery_record_ids.surgery_id')
+    def _compute_surgeries(self):
+        for record in self:
+            surgery_ids = record.surgery_record_ids.mapped('surgery_id').ids if record.surgery_record_ids else []
+            record.surgeries = [(6, 0, surgery_ids)]
 
     @api.depends('owner')
     def _compute_quote_count(self):
@@ -1234,135 +1032,6 @@ class Animal(models.Model):
                 'default_partner_id': self.owner.id,
             },
         }
-
-
-=== ./models/consents.py ===
-from odoo import models, fields, api
-
-
-class Consent(models.Model):
-    _name = "animal.consent"
-    _description = "Consentimientos informados"
-    _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = "date desc, sequence desc"
-
-    # Identificador / referencia
-    sequence = fields.Char(
-        string="Referencia",
-        required=True,
-        copy=False,
-        readonly=True,
-        index=True,
-        default=lambda self: 'Nuevo',
-        tracking=True
-    )
-
-    # Enlaces
-    animal_id = fields.Many2one(
-        'animal',
-        string='Animal',
-        required=True,
-        tracking=True,
-    )
-    owner_id = fields.Many2one(
-        related='animal_id.owner',
-        string="Dueño",
-        store=True,
-        readonly=True
-    )
-
-    # Datos del paciente (solo lectura para filtros/listados e impresión)
-    specie_id = fields.Many2one(
-        related='animal_id.species',
-        string='Especie',
-        store=True,
-        readonly=True
-    )
-    breed_id = fields.Many2one(
-        related='animal_id.breed',
-        string='Raza',
-        store=True,
-        readonly=True
-    )
-    sex = fields.Selection(
-        related='animal_id.sex',
-        string='Sexo',
-        store=True,
-        readonly=True
-    )
-    microchip_number = fields.Char(
-        related='animal_id.microchip_number',
-        string="N° de microchip",
-        store=True,
-        readonly=True
-    )
-
-    # Datos del consentimiento
-    date = fields.Datetime(
-        string="Fecha",
-        required=True,
-        default=fields.Datetime.now,
-        tracking=True,
-    )
-    consent_type = fields.Selection([
-        ('anesthesia', 'Anestesia / Sedación'),
-        ('surgery', 'Cirugía / Procedimiento Quirúrgico'),
-        ('procedure', 'Procedimiento / Examen'),
-        ('hospitalization', 'Hospitalización'),
-        ('euthanasia', 'Eutanasia'),
-        ('treatment', 'Tratamiento'),
-        ('other', 'Otro'),
-    ], string="Tipo de consentimiento", tracking=True)
-
-    consent_title = fields.Char(string="Título (impresión)", help="Título que saldrá en el PDF (opcional). Si lo dejas vacío, se usará el tipo de consentimiento.")
-    description = fields.Text(string="Descripción del procedimiento / motivo")
-    risks = fields.Text(string="Riesgos y posibles complicaciones")
-    post_instructions = fields.Text(string="Instrucciones postprocedimiento")
-
-    # Firmas y datos de participantes
-    doctor_name = fields.Char(string="Nombre M. Veterinario/a")
-    doctor_rut = fields.Char(string="RUT (médico)")
-    doctor_signature = fields.Binary(string="Firma Médico/a")
-    owner_signature = fields.Binary(string="Firma Propietario/a")
-
-    # Estado del consentimiento
-    state = fields.Selection([
-        ('draft', 'Borrador'),
-        ('signed', 'Firmado'),
-        ('cancelled', 'Cancelado'),
-    ], string="Estado", default='draft', tracking=True)
-
-    # Auxiliares
-    notes = fields.Text(string="Notas internas")
-
-    @api.model
-    def create(self, vals):
-        if vals.get('sequence', 'Nuevo') == 'Nuevo':
-            vals['sequence'] = self.env['ir.sequence'].next_by_code('animal.consent.sequence') or 'Nuevo'
-        return super(Consent, self).create(vals)
-
-    @api.onchange('animal_id')
-    def _onchange_animal_id_set_doctor(self):
-        """
-        Si el animal tiene 'médico tratante', sugerirlo como doctor_name.
-        """
-        for rec in self:
-            if rec.animal_id and rec.animal_id.treating_doctor and not rec.doctor_name:
-                rec.doctor_name = rec.animal_id.treating_doctor
-
-    # Acciones de estado
-    def action_confirm(self):
-        self.write({'state': 'signed'})
-        return True
-
-    def action_cancel(self):
-        self.write({'state': 'cancelled'})
-        return True
-
-    def action_reset_to_draft(self):
-        self.write({'state': 'draft'})
-        return True
-
 
 === ./models/exam_orders.py ===
 from odoo import models, fields, api
@@ -1538,14 +1207,342 @@ class Visit(models.Model):
         return super(Visit, self).create(vals)
 
 === ./models/surgeries.py ===
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+
 
 class Surgery(models.Model):
     _name = "animal.surgery"
-    _description = "Animal surgeries table"
+    _description = "Catálogo de cirugías"
 
-    name = fields.Char(string="Cirugía", required=True)
-    observations = fields.Text(string="Observaciones")
+    # === Datos de catálogo ===
+    name = fields.Char(string="Cirugía", required=True, help="Nombre común de la cirugía (p. ej. Enterectomía, OVH).")
+    code = fields.Char(string="Código", help="Código interno / arancelario (opcional).")
+    category = fields.Selection([
+        ('soft_tissue', 'Tejidos blandos'),
+        ('orthopedic', 'Ortopédica'),
+        ('neurologic', 'Neurológica'),
+        ('ophthalmic', 'Oftálmica'),
+        ('dental', 'Dental/Estomatológica'),
+        ('oncologic', 'Oncológica'),
+        ('reproductive', 'Reproductiva'),
+        ('other', 'Otra'),
+    ], string="Categoría", default='soft_tissue')
+    default_duration_min = fields.Integer(string="Duración estimada (min)", help="Duración típica, solo referencial.")
+    description = fields.Text(string="Descripción / Indicaciones")
+    notes = fields.Text(string="Notas internas")
+
+
+class SurgeryMedicationLine(models.Model):
+    """
+    Línea de consumo de medicamentos dentro de una cirugía.
+    Descuenta stock desde animal.medicine (en 'unidades' base del medicamento).
+    """
+    _name = "animal.surgery.medication.line"
+    _description = "Línea de medicamentos de cirugía"
+    _order = "id asc"
+
+    surgery_record_id = fields.Many2one(
+        "animal.surgery.record",
+        string="Registro quirúrgico",
+        required=True,
+        ondelete="cascade"
+    )
+    medicine_id = fields.Many2one(
+        "animal.medicine",
+        string="Medicamento/Consumible",
+        required=True,
+        ondelete="restrict"
+    )
+    quantity_units = fields.Float(
+        string="Cantidad (unidades)",
+        default=1.0,
+        help="Cantidad a descontar en unidades base (p. ej. mL, tabletas)."
+    )
+    lot_number = fields.Char(string="Lote / Serie")
+    lot_expiration = fields.Date(string="Vencimiento (lote)")
+    consume_stock = fields.Boolean(
+        string="Descontar stock",
+        default=True,
+        help="Si está activo, al guardar se descuenta la cantidad del stock."
+    )
+    notes = fields.Char(string="Notas")
+
+    _sql_constraints = [
+        ('qty_non_negative', 'CHECK(quantity_units >= 0)', 'La cantidad debe ser mayor o igual a 0.')
+    ]
+
+    # === Movimiento de stock ===
+    @api.model
+    def create(self, vals):
+        rec = super().create(vals)
+        if rec.consume_stock and rec.medicine_id and rec.quantity_units:
+            rec.medicine_id._consume_units(rec.quantity_units)
+        return rec
+
+    def write(self, vals):
+        before = {r.id: {
+            'medicine_id': r.medicine_id.id,
+            'quantity_units': float(r.quantity_units or 0.0),
+            'consume_stock': bool(r.consume_stock),
+        } for r in self}
+        res = super().write(vals)
+        for r in self:
+            prev = before[r.id]
+            prev_med = prev['medicine_id'] and self.env['animal.medicine'].browse(prev['medicine_id']) or False
+            prev_qty = prev['quantity_units']
+            prev_consume = prev['consume_stock']
+
+            new_med = r.medicine_id
+            new_qty = float(r.quantity_units or 0.0)
+            new_consume = bool(r.consume_stock)
+
+            # 1) Antes consumía y ahora NO -> revertir
+            if prev_consume and not new_consume and prev_med and prev_qty:
+                prev_med._revert_units(prev_qty)
+            # 2) Antes NO y ahora SÍ -> consumir
+            elif not prev_consume and new_consume and new_med and new_qty:
+                new_med._consume_units(new_qty)
+            # 3) Sigue consumiendo -> revisar cambios
+            elif prev_consume and new_consume:
+                if prev_med and new_med and prev_med.id != new_med.id:
+                    if prev_qty:
+                        prev_med._revert_units(prev_qty)
+                    if new_qty:
+                        new_med._consume_units(new_qty)
+                else:
+                    delta = new_qty - prev_qty
+                    if delta > 0:
+                        new_med._consume_units(delta)
+                    elif delta < 0:
+                        new_med._revert_units(-delta)
+        return res
+
+    def unlink(self):
+        for r in self:
+            if r.consume_stock and r.medicine_id and r.quantity_units:
+                r.medicine_id._revert_units(r.quantity_units)
+        return super().unlink()
+
+
+class SurgeryRecord(models.Model):
+    """
+    Registro quirúrgico por animal (acto quirúrgico).
+    Incluye: preoperatorio, anestesia, procedimiento, consumos y postoperatorio.
+    """
+    _name = "animal.surgery.record"
+    _description = "Registro de cirugías por animal"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = "date desc, id desc"
+
+    # Identificador / referencia
+    sequence = fields.Char(
+        string="Referencia",
+        required=True,
+        copy=False,
+        readonly=True,
+        index=True,
+        default=lambda self: 'Nuevo',
+        tracking=True
+    )
+
+    # Enlaces
+    animal_id = fields.Many2one(
+        "animal",
+        string="Animal",
+        required=True,
+        ondelete="cascade",
+        index=True,
+        tracking=True,
+    )
+    owner_id = fields.Many2one(
+        related="animal_id.owner",
+        string="Dueño",
+        store=True,
+        readonly=True
+    )
+    specie_id = fields.Many2one(
+        related="animal_id.species",
+        string="Especie",
+        store=True,
+        readonly=True
+    )
+    breed_id = fields.Many2one(
+        related="animal_id.breed",
+        string="Raza",
+        store=True,
+        readonly=True
+    )
+    sex = fields.Selection(
+        related="animal_id.sex",
+        string="Sexo",
+        store=True,
+        readonly=True
+    )
+    microchip_number = fields.Char(
+        related='animal_id.microchip_number',
+        string="N° de microchip",
+        store=True,
+        readonly=True
+    )
+
+    # Programación / Estado
+    date = fields.Datetime(string="Fecha/hora", required=True, default=fields.Datetime.now, tracking=True)
+    duration_min = fields.Integer(string="Duración (min)", tracking=True)
+    state = fields.Selection([
+        ('scheduled', 'Programada'),
+        ('in_progress', 'En curso'),
+        ('done', 'Completada'),
+        ('cancelled', 'Cancelada'),
+    ], string="Estado", default='scheduled', tracking=True, index=True)
+
+    # Equipo
+    surgeon = fields.Char(string="Cirujano/a", tracking=True)
+    assistant = fields.Char(string="Asistente", tracking=True)
+    anesthetist = fields.Char(string="Anestesista", tracking=True)
+
+    # Procedimiento
+    surgery_id = fields.Many2one(
+        "animal.surgery",
+        string="Cirugía",
+        required=True,
+        ondelete="restrict",
+        tracking=True
+    )
+    side = fields.Selection([
+        ('na', 'N/A'),
+        ('left', 'Izquierda'),
+        ('right', 'Derecha'),
+        ('midline', 'Línea media'),
+        ('bilateral', 'Bilateral'),
+    ], string="Lado/Abordaje", default='na', tracking=True)
+    wound_class = fields.Selection([
+        ('clean', 'Limpia'),
+        ('clean_contaminated', 'Limpia-contaminada'),
+        ('contaminated', 'Contaminada'),
+        ('dirty', 'Sucia'),
+    ], string="Clasificación herida", tracking=True)
+    preop_diagnosis = fields.Text(string="Diagnóstico preoperatorio")
+    postop_diagnosis = fields.Text(string="Diagnóstico postoperatorio")
+    procedure_details = fields.Text(string="Detalles del procedimiento")
+    complications = fields.Text(string="Complicaciones")
+    samples_taken = fields.Text(string="Muestras tomadas (biopsia, etc.)")
+    estimated_blood_loss_ml = fields.Float(string="Pérdida sanguínea estimada (mL)")
+
+    # Preoperatorio / Riesgo
+    fasting_hours = fields.Float(string="Horas de ayuno")
+    asa_status = fields.Selection([
+        ('I', 'ASA I'),
+        ('II', 'ASA II'),
+        ('III', 'ASA III'),
+        ('IV', 'ASA IV'),
+        ('V', 'ASA V'),
+    ], string="Estado ASA")
+    preop_checks = fields.Text(string="Evaluación preoperatoria (exámenes / hallazgos)")
+    consent_id = fields.Many2one(
+        "animal.consent",
+        string="Consentimiento informado",
+        domain="[('animal_id', '=', animal_id), ('state', '=', 'signed')]",
+        help="Vincula un consentimiento firmado para cirugía/anestesia."
+    )
+
+    # Anestesia / Analgesia
+    anesthesia_protocol = fields.Text(string="Protocolo anestésico (premed/inducción/mantenimiento)")
+    fluids_ml = fields.Float(string="Fluidos totales (mL)")
+    analgesia = fields.Text(string="Analgesia/antibióticos (intra/post)")
+    monitoring_notes = fields.Text(string="Monitoreo y eventos intraoperatorios")
+
+    # Monitorización (campos opcionales)
+    vitals_hr = fields.Float(string="Frecuencia cardiaca (lpm)")
+    vitals_rr = fields.Float(string="Frecuencia respiratoria (rpm)")
+    vitals_temp = fields.Float(string="Temperatura (°C)")
+    vitals_spo2 = fields.Float(string="SpO₂ (%)")
+    vitals_map = fields.Float(string="PAM (mmHg)")
+    vitals_etco2 = fields.Float(string="ETCO₂ (mmHg)")
+
+    # Postoperatorio
+    hospitalization = fields.Boolean(string="Hospitalización", help="¿Queda hospitalizado tras la cirugía?")
+    discharge_datetime = fields.Datetime(string="Alta (fecha/hora)")
+    post_instructions = fields.Text(string="Indicaciones postoperatorias")
+    next_control = fields.Date(string="Próximo control")
+
+    # Consumos (descuentan stock de medicamentos)
+    medication_line_ids = fields.One2many(
+        "animal.surgery.medication.line",
+        "surgery_record_id",
+        string="Consumos / Medicación intra-quirúrgica"
+    )
+
+    # Adjuntos adicionales
+    attachment_ids = fields.Many2many(
+        'ir.attachment',
+        'animal_surgery_record_ir_attachments_rel',
+        'record_id',
+        'attachment_id',
+        string="Adjuntos"
+    )
+
+    notes = fields.Text(string="Notas internas")
+
+    @api.model
+    def create(self, vals):
+        if vals.get('sequence', 'Nuevo') == 'Nuevo':
+            vals['sequence'] = self.env['ir.sequence'].next_by_code('animal.surgery.record.sequence') or 'Nuevo'
+        return super().create(vals)
+
+    @api.onchange('animal_id')
+    def _onchange_animal_id_prefill_team(self):
+        """
+        Si el animal tiene 'médico tratante', proponerlo como Cirujano.
+        Sugerimos consentimiento firmado más reciente del animal.
+        """
+        for rec in self:
+            if rec.animal_id and rec.animal_id.treating_doctor and not rec.surgeon:
+                rec.surgeon = rec.animal_id.treating_doctor
+            if rec.animal_id and not rec.consent_id:
+                consent = self.env['animal.consent'].search([
+                    ('animal_id', '=', rec.animal_id.id),
+                    ('state', '=', 'signed'),
+                    ('consent_type', 'in', ('surgery', 'anesthesia'))
+                ], order='date desc', limit=1)
+                if consent:
+                    rec.consent_id = consent.id
+
+    def name_get(self):
+        res = []
+        for rec in self:
+            label = rec.sequence or _("Cirugía")
+            if rec.animal_id:
+                label = "%s - %s" % (label, rec.animal_id.name)
+            res.append((rec.id, label))
+        return res
+
+    # === Acciones de flujo ===
+    def action_start(self):
+        for rec in self:
+            if rec.state not in ('scheduled',):
+                raise UserError(_("Solo se puede iniciar una cirugía programada."))
+            rec.state = 'in_progress'
+        return True
+
+    def action_done(self):
+        for rec in self:
+            if rec.state not in ('in_progress', 'scheduled'):
+                raise UserError(_("Solo se puede finalizar una cirugía en curso o programada."))
+            rec.state = 'done'
+        return True
+
+    def action_cancel(self):
+        for rec in self:
+            if rec.state == 'done':
+                raise UserError(_("No es posible cancelar una cirugía completada."))
+            rec.state = 'cancelled'
+        return True
+
+    def action_reset_to_scheduled(self):
+        for rec in self:
+            rec.state = 'scheduled'
+        return True
 
 
 === ./models/medicines.py ===
@@ -1868,6 +1865,302 @@ class ReportExamOrder(models.AbstractModel):
         }
 
 
+=== ./report/surgery_report.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- Paperformat SIN header reservado (Odoo 17) -->
+    <record id="paperformat_surgery_noheader" model="report.paperformat">
+      <field name="name">Surgery PDF (no header)</field>
+      <field name="format">A4</field>
+      <field name="orientation">Portrait</field>
+      <field name="margin_top">6</field>
+      <field name="margin_bottom">8</field>
+      <field name="margin_left">10</field>
+      <field name="margin_right">10</field>
+      <field name="header_line">False</field>
+      <field name="header_spacing">0</field>
+    </record>
+
+    <!-- Acción de reporte PDF -->
+    <record id="action_report_surgery" model="ir.actions.report">
+      <field name="name">Acta Quirúrgica</field>
+      <field name="model">animal.surgery.record</field>
+      <field name="report_type">qweb-pdf</field>
+      <field name="report_name">vet.report_surgery</field>
+      <field name="report_file">vet.report_surgery</field>
+      <field name="paperformat_id" ref="vet.paperformat_surgery_noheader"/>
+      <field name="print_report_name">
+        (object.sequence or 'Cirugia') + ' - ' + (object.animal_id and object.animal_id.name or 'Paciente') + '.pdf'
+      </field>
+    </record>
+
+    <!-- Contenedor por registro -->
+    <template id="report_surgery">
+      <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="doc">
+          <t t-call="vet.report_surgery_document"/>
+          <div class="pagebreak"/>
+        </t>
+      </t>
+    </template>
+
+    <!-- Documento -->
+    <template id="report_surgery_document">
+      <t t-set="o" t-value="doc"/>
+      <t t-call="web.external_layout">
+        <style type="text/css">
+          .srg * { font-size: 12px; font-family: "DejaVu Sans", sans-serif; }
+          .srg .title { font-size: 18px; font-weight: 700; text-align:center; }
+          .srg table { width: 100%; border-collapse: collapse; }
+          .srg th, .srg td { border: 0; padding: 4px 6px; vertical-align: top; }
+          .srg .section { font-weight: 700; text-align:center; border: 1px solid #000; background: #f3f3f3; }
+          .srg .boxed { border: 1px solid #000; }
+          .srg .label { width: 22%; white-space: nowrap; }
+          .srg .val { width: 28%; border-bottom: 1px solid #000; }
+          .srg .val2 { border-bottom: 1px solid #000; }
+          .srg .muted { color:#666; }
+          .srg .header-strip { margin-bottom: 4px; }
+          .srg .header-image { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+          .srg .small { font-size: 11px; }
+
+          .footer,
+          .o_footer,
+          .header,
+          .o_header {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+          }
+        </style>
+
+        <div class="srg">
+
+          <!-- Cabecera -->
+          <div class="header-strip">
+            <img class="header-image"
+                 t-if="surg_header_image"
+                 t-att-src="'data:image/png;base64,%s' % (surg_header_image)"
+                 alt="Encabezado"/>
+          </div>
+
+          <div class="title" style="margin:6px 0;">
+            ACTA QUIRÚRGICA
+          </div>
+
+          <!-- Propietario -->
+          <table class="boxed" style="margin-top:6px;">
+            <tr><th class="section" colspan="4">Información del propietario</th></tr>
+            <tr>
+              <td class="label">Nombre :</td>
+              <td class="val"><t t-esc="o.owner_id and (o.owner_id.name or '')"/></td>
+              <td class="label">RUT :</td>
+              <td class="val"><t t-esc="o.owner_id and (o.owner_id.vat or '')"/></td>
+            </tr>
+            <tr>
+              <td class="label">Teléfono :</td>
+              <td class="val"><t t-esc="o.owner_id and (o.owner_id.phone or o.owner_id.mobile or '')"/></td>
+              <td class="label">Correo :</td>
+              <td class="val"><t t-esc="o.owner_id and (o.owner_id.email or '')"/></td>
+            </tr>
+            <tr>
+              <td class="label">Dirección :</td>
+              <td class="val" colspan="3"><t t-esc="o.owner_id and (o.owner_id.street or '')"/></td>
+            </tr>
+          </table>
+
+          <!-- Paciente -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section" colspan="6">Información del paciente</th></tr>
+            <tr>
+              <td class="label">Nombre:</td>
+              <td class="val"><t t-esc="o.animal_id and (o.animal_id.name or '')"/></td>
+              <td class="label">Especie:</td>
+              <td class="val"><t t-esc="o.specie_id and o.specie_id.name or ''"/></td>
+              <td class="label">Microchip:</td>
+              <td class="val"><t t-esc="o.microchip_number or ''"/></td>
+            </tr>
+            <tr>
+              <td class="label">Sexo:</td>
+              <td class="val"><t t-esc="({'male':'Masculino','female':'Femenino'}).get(o.sex) if o.sex else ''"/></td>
+              <td class="label">Raza:</td>
+              <td class="val"><t t-esc="o.breed_id and o.breed_id.name or ''"/></td>
+              <td class="label"></td>
+              <td class="val"></td>
+            </tr>
+          </table>
+
+          <!-- Detalle general -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section" colspan="4">Detalles</th></tr>
+            <tr>
+              <td class="label">Referencia:</td>
+              <td class="val"><t t-esc="o.sequence or ''"/></td>
+              <td class="label">Fecha/hora:</td>
+              <td class="val"><span t-field="o.date" t-options='{"widget": "datetime"}'/></td>
+            </tr>
+            <tr>
+              <td class="label">Cirugía:</td>
+              <td class="val"><t t-esc="o.surgery_id and o.surgery_id.name or ''"/></td>
+              <td class="label">Estado:</td>
+              <td class="val"><t t-esc="dict(o._fields['state'].selection).get(o.state)"/></td>
+            </tr>
+            <tr>
+              <td class="label">Cirujano/a:</td>
+              <td class="val"><t t-esc="o.surgeon or ''"/></td>
+              <td class="label">Anestesista:</td>
+              <td class="val"><t t-esc="o.anesthetist or ''"/></td>
+            </tr>
+          </table>
+
+          <!-- Preoperatorio -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section" colspan="4">Preoperatorio</th></tr>
+            <tr>
+              <td class="label">Ayuno (hrs):</td>
+              <td class="val"><t t-esc="o.fasting_hours or ''"/></td>
+              <td class="label">ASA:</td>
+              <td class="val"><t t-esc="o.asa_status or ''"/></td>
+            </tr>
+            <tr>
+              <td class="label" colspan="4">Evaluación / exámenes:</td>
+            </tr>
+            <tr>
+              <td class="val2" colspan="4" style="height: 84px;"><t t-esc="o.preop_checks or ''"/></td>
+            </tr>
+            <tr>
+              <td class="label" colspan="4">Diagnóstico preoperatorio:</td>
+            </tr>
+            <tr>
+              <td class="val2" colspan="4" style="height: 70px;"><t t-esc="o.preop_diagnosis or ''"/></td>
+            </tr>
+          </table>
+
+          <!-- Anestesia -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section" colspan="4">Anestesia</th></tr>
+            <tr>
+              <td class="label" colspan="4">Protocolo anestésico:</td>
+            </tr>
+            <tr>
+              <td class="val2" colspan="4" style="height: 84px;"><t t-esc="o.anesthesia_protocol or ''"/></td>
+            </tr>
+            <tr>
+              <td class="label">Fluidos (mL):</td>
+              <td class="val"><t t-esc="o.fluids_ml or ''"/></td>
+              <td class="label">Analgesia/ATB:</td>
+              <td class="val"><t t-esc="o.analgesia or ''"/></td>
+            </tr>
+            <tr>
+              <td class="label" colspan="4">Monitoreo / eventos:</td>
+            </tr>
+            <tr>
+              <td class="val2" colspan="4" style="height: 70px;"><t t-esc="o.monitoring_notes or ''"/></td>
+            </tr>
+          </table>
+
+          <!-- Procedimiento -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section" colspan="4">Procedimiento quirúrgico</th></tr>
+            <tr>
+              <td class="label">Lado/Abordaje:</td>
+              <td class="val"><t t-esc="dict(o._fields['side'].selection).get(o.side) if o.side else ''"/></td>
+              <td class="label">Herida (clasif.):</td>
+              <td class="val"><t t-esc="dict(o._fields['wound_class'].selection).get(o.wound_class) if o.wound_class else ''"/></td>
+            </tr>
+            <tr>
+              <td class="label">Pérdida sanguínea (mL):</td>
+              <td class="val"><t t-esc="o.estimated_blood_loss_ml or ''"/></td>
+              <td class="label"></td>
+              <td class="val"></td>
+            </tr>
+            <tr>
+              <td class="label" colspan="4">Detalles / técnica / hallazgos:</td>
+            </tr>
+            <tr>
+              <td class="val2" colspan="4" style="height: 110px;"><t t-esc="o.procedure_details or ''"/></td>
+            </tr>
+            <tr>
+              <td class="label">Muestras tomadas:</td>
+              <td class="val" colspan="3"><t t-esc="o.samples_taken or ''"/></td>
+            </tr>
+            <tr>
+              <td class="label">Complicaciones:</td>
+              <td class="val" colspan="3"><t t-esc="o.complications or ''"/></td>
+            </tr>
+            <tr>
+              <td class="label">Diagnóstico postoperatorio:</td>
+              <td class="val" colspan="3"><t t-esc="o.postop_diagnosis or ''"/></td>
+            </tr>
+          </table>
+
+          <!-- Consumos -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section">Consumos intra-quirúrgicos (stock)</th></tr>
+            <tr>
+              <td>
+                <table style="width:100%;">
+                  <thead>
+                    <tr>
+                      <th style="text-align:left;">Medicamento/Consumible</th>
+                      <th style="text-align:left;">Cantidad (unid.)</th>
+                      <th style="text-align:left;">Lote</th>
+                      <th style="text-align:left;">Venc.</th>
+                      <th style="text-align:left;">Notas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr t-foreach="o.medication_line_ids" t-as="l">
+                      <td><t t-esc="l.medicine_id and l.medicine_id.name or ''"/></td>
+                      <td><t t-esc="l.quantity_units or ''"/></td>
+                      <td><t t-esc="l.lot_number or ''"/></td>
+                      <td><span t-field="l.lot_expiration" t-options='{"widget": "date"}'/></td>
+                      <td><t t-esc="l.notes or ''"/></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Postoperatorio -->
+          <table class="boxed" style="margin-top:8px;">
+            <tr><th class="section" colspan="4">Postoperatorio</th></tr>
+            <tr>
+              <td class="label">Hospitalización:</td>
+              <td class="val"><t t-esc=" 'Sí' if o.hospitalization else 'No' "/></td>
+              <td class="label">Alta:</td>
+              <td class="val"><span t-field="o.discharge_datetime" t-options='{"widget":"datetime"}'/></td>
+            </tr>
+            <tr>
+              <td class="label">Próximo control:</td>
+              <td class="val"><span t-field="o.next_control" t-options='{"widget":"date"}'/></td>
+              <td class="label"></td>
+              <td class="val"></td>
+            </tr>
+            <tr>
+              <td class="label" colspan="4">Indicaciones:</td>
+            </tr>
+            <tr>
+              <td class="val2" colspan="4" style="height: 110px;"><t t-esc="o.post_instructions or ''"/></td>
+            </tr>
+          </table>
+
+          <div class="small muted" style="margin-top:6px;">
+            Ref.: <t t-esc="o.sequence or ''"/> — Paciente: <t t-esc="o.animal_id and o.animal_id.name or ''"/>
+          </div>
+        </div>
+      </t>
+    </template>
+
+  </data>
+</odoo>
+
+
 === ./report/consent_report.xml ===
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
@@ -2172,6 +2465,36 @@ from . import report_exam_order
 from . import report_vaccination
 from . import report_consent
 from . import report_prescription
+from . import report_surgery
+
+
+=== ./report/report_surgery.py ===
+# -*- coding: utf-8 -*-
+from odoo import models
+from odoo.tools import file_open
+import base64
+
+
+class ReportSurgery(models.AbstractModel):
+    _name = 'report.vet.report_surgery'
+    _description = 'Report Surgery (PDF)'
+
+    def _get_report_values(self, docids, data=None):
+        docs = self.env['animal.surgery.record'].browse(docids)
+
+        header_b64 = False
+        try:
+            with file_open('vet/static/src/img/visita_header.png', 'rb') as f:
+                header_b64 = base64.b64encode(f.read()).decode('utf-8')
+        except Exception:
+            header_b64 = False
+
+        return {
+            'doc_ids': docs.ids,
+            'doc_model': 'animal.surgery.record',
+            'docs': docs,
+            'surg_header_image': header_b64,
+        }
 
 
 === ./report/visit_report.xml ===
@@ -3771,6 +4094,8 @@ Manage the animals that visit our veterinarian
         'report/consent_report.xml',
         # === NUEVO: Reporte de Recetas ===
         'report/prescription_report.xml',
+        # === NUEVO: Reporte de Cirugías ===
+        'report/surgery_report.xml',
 
         # === Vistas base ===
         'views/animals_views.xml',
@@ -3820,6 +4145,8 @@ Manage the animals that visit our veterinarian
         'views/consent_sequence.xml',
         # === NUEVO: Secuencia de Recetas ===
         'views/prescription_sequence.xml',
+        # === NUEVO: Secuencia de Cirugías ===
+        'views/surgery_sequence.xml',
     ],
 
     # only loaded in demonstration mode
@@ -3894,6 +4221,8 @@ access_animal_consent,animal.consent,model_animal_consent,base.group_user,1,1,1,
 access_vet_waiting_ticket,vet.waiting.ticket,model_vet_waiting_ticket,base.group_user,1,1,1,1
 access_animal_medication,animal.medication,model_animal_medication,base.group_user,1,1,1,1
 access_animal_prescription,animal.prescription,model_animal_prescription,base.group_user,1,1,1,1
+access_animal_surgery_record,animal.surgery.record,model_animal_surgery_record,base.group_user,1,1,1,1
+access_animal_surgery_med_line,animal.surgery.medication.line,model_animal_surgery_medication_line,base.group_user,1,1,1,1
 
 
 === ./controllers/__init__.py ===
@@ -3926,6 +4255,20 @@ from . import controllers
 #         })
 
 
+
+=== ./views/species_views.xml ===
+<odoo>
+    <data>
+
+        <record id="specie_action" model="ir.actions.act_window">
+            <field name="name">Especies</field>
+            <field name="res_model">animal.specie</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+    </data>
+</odoo>
+
+
 === ./views/breeds_views.xml ===
 <odoo>
     <data>
@@ -3945,6 +4288,19 @@ from . import controllers
             <field name="name">Razas</field>
             <field name="res_model">animal.breed</field>
             <field name="view_mode">tree,form,kanban</field>
+        </record>
+    </data>
+</odoo>
+
+
+=== ./views/tags_views.xml ===
+<odoo>
+    <data>
+
+        <record id="tag_action" model="ir.actions.act_window">
+            <field name="name">Etiquetas</field>
+            <field name="res_model">animal.tag</field>
+            <field name="view_mode">tree,form</field>
         </record>
     </data>
 </odoo>
@@ -4354,14 +4710,287 @@ from . import controllers
 
 === ./views/surgeries_views.xml ===
 <odoo>
-    <data>
+  <data>
 
-        <record id="surgery_action" model="ir.actions.act_window">
-            <field name="name">Cirugías</field>
-            <field name="res_model">animal.surgery</field>
-            <field name="view_mode">tree,form</field>
-        </record>
-    </data>
+    <!-- ===================== CATÁLOGO DE CIRUGÍAS ===================== -->
+    <record id="view_surgery_tree" model="ir.ui.view">
+      <field name="name">animal.surgery.tree</field>
+      <field name="model">animal.surgery</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+          <field name="code"/>
+          <field name="category"/>
+          <field name="default_duration_min"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="view_surgery_form" model="ir.ui.view">
+      <field name="name">animal.surgery.form</field>
+      <field name="model">animal.surgery</field>
+      <field name="arch" type="xml">
+        <form string="Cirugía (catálogo)">
+          <sheet>
+            <group>
+              <group>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="category"/>
+              </group>
+              <group>
+                <field name="default_duration_min"/>
+              </group>
+            </group>
+            <notebook>
+              <page string="Descripción">
+                <field name="description" nolabel="1"/>
+              </page>
+              <page string="Notas">
+                <field name="notes" nolabel="1"/>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="action_surgery_catalog" model="ir.actions.act_window">
+      <field name="name">Catálogo de cirugías</field>
+      <field name="res_model">animal.surgery</field>
+      <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- ===================== REGISTRO QUIRÚRGICO ===================== -->
+    <record id="view_surgery_record_tree" model="ir.ui.view">
+      <field name="name">animal.surgery.record.tree</field>
+      <field name="model">animal.surgery.record</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="sequence"/>
+          <field name="date"/>
+          <field name="animal_id"/>
+          <field name="surgery_id"/>
+          <field name="surgeon"/>
+          <field name="anesthetist"/>
+          <field name="asa_status"/>
+          <field name="duration_min"/>
+          <field name="state"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="view_surgery_record_search" model="ir.ui.view">
+      <field name="name">animal.surgery.record.search</field>
+      <field name="model">animal.surgery.record</field>
+      <field name="arch" type="xml">
+        <search>
+          <field name="sequence"/>
+          <field name="animal_id"/>
+          <field name="surgery_id"/>
+          <field name="surgeon"/>
+          <field name="anesthetist"/>
+          <field name="asa_status"/>
+          <filter name="scheduled" string="Programadas" domain="[('state','=','scheduled')]"/>
+          <filter name="in_progress" string="En curso" domain="[('state','=','in_progress')]"/>
+          <filter name="done" string="Completadas" domain="[('state','=','done')]"/>
+          <filter name="cancelled" string="Canceladas" domain="[('state','=','cancelled')]"/>
+          <group expand="0" string="Agrupar">
+            <filter name="group_animal" string="Por animal" context="{'group_by':'animal_id'}"/>
+            <filter name="group_surgeon" string="Por cirujano/a" context="{'group_by':'surgeon'}"/>
+            <filter name="group_state" string="Por estado" context="{'group_by':'state'}"/>
+            <filter name="group_date" string="Por fecha" context="{'group_by':'date'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <record id="view_surgery_record_form" model="ir.ui.view">
+      <field name="name">animal.surgery.record.form</field>
+      <field name="model">animal.surgery.record</field>
+      <field name="arch" type="xml">
+        <form string="Registro quirúrgico">
+          <header>
+            <!-- Odoo 17: usar invisible="" en lugar de states="" -->
+            <button name="action_start" string="Iniciar" type="object"
+                    invisible="state != 'scheduled'" class="btn-primary"/>
+            <button name="action_done" string="Finalizar" type="object"
+                    invisible="state not in ('scheduled','in_progress')" class="btn-success"/>
+            <button name="action_cancel" string="Cancelar" type="object"
+                    invisible="state not in ('scheduled','in_progress')" class="btn-secondary"/>
+            <button name="action_reset_to_scheduled" string="Volver a Programada" type="object"
+                    invisible="state != 'cancelled'" class="btn-secondary"/>
+            <field name="state" widget="statusbar" statusbar_visible="scheduled,in_progress,done,cancelled"/>
+          </header>
+          <sheet>
+            <div class="oe_button_box" name="button_box"/>
+            <group>
+              <group>
+                <field name="sequence" readonly="1"/>
+                <field name="date"/>
+                <field name="duration_min"/>
+                <field name="animal_id" options="{'no_create': True}"/>
+                <field name="owner_id" readonly="1"/>
+              </group>
+              <group>
+                <field name="surgery_id" options="{'no_create': False}"/>
+                <field name="surgeon"/>
+                <field name="assistant"/>
+                <field name="anesthetist"/>
+                <field name="consent_id" options="{'no_create': True}"/>
+              </group>
+            </group>
+
+            <notebook>
+              <page string="Preoperatorio">
+                <group>
+                  <group>
+                    <field name="preop_diagnosis" placeholder="Motivo/diagnóstico que indica cirugía..." nolabel="1"/>
+                  </group>
+                </group>
+                <group>
+                  <group>
+                    <field name="fasting_hours"/>
+                    <field name="asa_status"/>
+                  </group>
+                  <group>
+                    <field name="preop_checks" placeholder="Exámenes, hallazgos, riesgos..."/>
+                  </group>
+                </group>
+              </page>
+
+              <page string="Anestesia">
+                <group>
+                  <group>
+                    <field name="anesthesia_protocol" placeholder="Premedicación / Inducción / Mantenimiento"/>
+                    <field name="analgesia" placeholder="Analgesia intra y postoperatoria, antibióticos..."/>
+                  </group>
+                  <group>
+                    <field name="fluids_ml"/>
+                    <label for="monitoring_notes"/>
+                    <field name="monitoring_notes" placeholder="Eventos intraoperatorios, comentarios de monitorización..."/>
+                  </group>
+                </group>
+                <group string="Signos vitales (opcional)">
+                  <group>
+                    <field name="vitals_hr"/>
+                    <field name="vitals_rr"/>
+                    <field name="vitals_temp"/>
+                  </group>
+                  <group>
+                    <field name="vitals_spo2"/>
+                    <field name="vitals_map"/>
+                    <field name="vitals_etco2"/>
+                  </group>
+                </group>
+              </page>
+
+              <page string="Procedimiento">
+                <group>
+                  <group>
+                    <field name="side"/>
+                    <field name="wound_class"/>
+                    <field name="estimated_blood_loss_ml"/>
+                  </group>
+                  <group>
+                    <field name="procedure_details" placeholder="Técnica, hallazgos, pasos relevantes..." nolabel="1"/>
+                  </group>
+                </group>
+                <group>
+                  <group>
+                    <field name="samples_taken" placeholder="Muestras tomadas / laboratorio..."/>
+                  </group>
+                  <group>
+                    <field name="complications" placeholder="Complicaciones ocurridas..."/>
+                  </group>
+                </group>
+                <group>
+                  <group>
+                    <field name="postop_diagnosis" placeholder="Diagnóstico postoperatorio" nolabel="1"/>
+                  </group>
+                </group>
+              </page>
+
+              <page string="Consumos (stock)">
+                <field name="medication_line_ids" context="{'default_surgery_record_id': active_id}">
+                  <tree editable="bottom">
+                    <field name="medicine_id"/>
+                    <field name="quantity_units"/>
+                    <field name="lot_number"/>
+                    <field name="lot_expiration"/>
+                    <field name="consume_stock"/>
+                    <field name="notes"/>
+                  </tree>
+                  <form string="Medicamento de cirugía">
+                    <group>
+                      <group>
+                        <field name="medicine_id"/>
+                        <field name="quantity_units"/>
+                        <field name="consume_stock"/>
+                      </group>
+                      <group>
+                        <field name="lot_number"/>
+                        <field name="lot_expiration"/>
+                        <field name="notes"/>
+                      </group>
+                    </group>
+                  </form>
+                </field>
+              </page>
+
+              <page string="Postoperatorio">
+                <group>
+                  <group>
+                    <field name="hospitalization"/>
+                    <field name="discharge_datetime"/>
+                    <field name="next_control"/>
+                  </group>
+                  <group>
+                    <field name="post_instructions" placeholder="Cuidados, collar isabelino, curaciones, controles, signos de alarma..." nolabel="1"/>
+                  </group>
+                </group>
+                <group string="Adjuntos">
+                  <field name="attachment_ids" widget="many2many_binary" options="{'no_create': True}"/>
+                </group>
+              </page>
+
+              <page string="Paciente (referencia)">
+                <group>
+                  <group>
+                    <field name="specie_id" readonly="1"/>
+                    <field name="breed_id" readonly="1"/>
+                    <field name="sex" readonly="1"/>
+                  </group>
+                  <group>
+                    <field name="microchip_number" readonly="1"/>
+                  </group>
+                </group>
+              </page>
+
+              <page string="Notas">
+                <field name="notes" nolabel="1"/>
+              </page>
+            </notebook>
+
+            <div class="oe_chatter">
+              <field name="message_follower_ids" widget="mail_followers"/>
+              <field name="message_ids" widget="mail_thread"/>
+            </div>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="action_surgery_record" model="ir.actions.act_window">
+      <field name="name">Registro quirúrgico</field>
+      <field name="res_model">animal.surgery.record</field>
+      <field name="view_mode">tree,form</field>
+      <field name="context">{'search_default_scheduled': 1}</field>
+    </record>
+
+    <!-- (Sin menús aquí para evitar duplicar IDs; los menús viven en animals_menus.xml) -->
+
+  </data>
 </odoo>
 
 
@@ -4575,11 +5204,28 @@ from . import controllers
             parent="menu_medical_management"
             action="allergy_action"
         />
+
+        <!-- ====== CIRUGÍAS (AMPLIADO) ======
+             Convertimos el ítem previo de "Cirugías" en CONTENEDOR
+             y añadimos dos submenús: Registro y Catálogo. -->
         <menuitem
             id="menu_surgeries_list"
             name="Cirugías"
             parent="menu_medical_management"
-            action="surgery_action"
+        />
+        <menuitem
+            id="menu_vet_surgery_record"
+            name="Registro quirúrgico"
+            parent="menu_surgeries_list"
+            action="action_surgery_record"
+            sequence="10"
+        />
+        <menuitem
+            id="menu_vet_surgery_catalog"
+            name="Catálogo de cirugías"
+            parent="menu_surgeries_list"
+            action="action_surgery_catalog"
+            sequence="20"
         />
 
         <!-- Órdenes de Exámenes -->
@@ -5780,6 +6426,20 @@ from . import controllers
   </data>
 </odoo>
 
+=== ./views/surgery_sequence.xml ===
+<odoo>
+  <data noupdate="1">
+    <record id="seq_animal_surgery_record" model="ir.sequence">
+      <field name="name">Cirugía - Secuencia</field>
+      <field name="code">animal.surgery.record.sequence</field>
+      <field name="prefix">CIR/%(y)s/%(month)s/</field>
+      <field name="padding">4</field>
+      <field name="company_id" eval="False"/>
+    </record>
+  </data>
+</odoo>
+
+
 === ./views/waiting_room_views.xml ===
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
@@ -6165,3 +6825,6 @@ from . import controllers
         </record>
     </data>
 </odoo>
+    
+
+=== ./combined.txt ===
