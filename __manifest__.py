@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*- 
 {
     'name': "Veterinary management",
 
@@ -10,9 +10,9 @@ Manage the animals that visit our veterinarian
 
     'author': "z99sys",
     'website': "https://z99sys.cl/",
-    'license': 'AGPL-3',
+    'license': 'OPL-1',  # Cambiado desde AGPL-3 para permitir venta en Odoo Apps
     'category': 'Animales',
-    'version': '1.0',
+    'version': '17.0.1.0.0',  # Debe iniciar con la serie para Odoo 17
 
     # any module necessary for this one to work correctly
     'depends': ['base','mail'],
@@ -100,4 +100,7 @@ Manage the animals that visit our veterinarian
     'installable': True,
     'application': True,
     'auto_install': False,
+
+    'price': 200.0,
+    'currency': 'USD',
 }
