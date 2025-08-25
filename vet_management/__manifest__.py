@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*- 
 {
-    'name': "Veterinary management",
+    'name': "Gestión Veterinaria",
 
-    'summary': "Manage the animals that visit our veterinarian",
+    'summary': "Gestiona los animales que visitan la veterinaria",
 
     'description': """
-Manage the animals that visit our veterinarian
+Gestiona los animales que visitan la veterinaria.
+Incluye visitas, vacunas, cirugías, recetas y más.
     """,
 
     'author': "z99sys",
