@@ -5,7 +5,7 @@ import base64
 
 
 class ReportSurgery(models.AbstractModel):
-    _name = 'report.vet.report_surgery'
+    _name = 'report.vet_management.report_surgery'
     _description = 'Report Surgery (PDF)'
 
     def _get_report_values(self, docids, data=None):
@@ -13,7 +13,7 @@ class ReportSurgery(models.AbstractModel):
 
         header_b64 = False
         try:
-            with file_open('vet/static/src/img/visita_header.png', 'rb') as f:
+            with file_open('vet_management/static/src/img/visita_header.png', 'rb') as f:
                 header_b64 = base64.b64encode(f.read()).decode('utf-8')
         except Exception:
             header_b64 = False

@@ -4,7 +4,7 @@ from odoo.tools import file_open
 import base64
 
 class ReportVisit(models.AbstractModel):
-    _name = 'report.vet.report_visit'
+    _name = 'report.vet_management.report_visit'
     _description = 'Report Visit (PDF)'
 
     def _get_report_values(self, docids, data=None):
@@ -15,13 +15,13 @@ class ReportVisit(models.AbstractModel):
 
         # Intentamos cargar ambas imágenes desde el módulo; si falla, seguimos sin romper el reporte
         try:
-            with file_open('vet/static/src/img/visita_header.png', 'rb') as f:
+            with file_open('vet_management/static/src/img/visita_header.png', 'rb') as f:
                 header_b64 = base64.b64encode(f.read()).decode('utf-8')
         except Exception:
             header_b64 = False
 
         try:
-            with file_open('vet/static/src/img/visita_divider.png', 'rb') as f:
+            with file_open('vet_management/static/src/img/visita_divider.png', 'rb') as f:
                 divider_b64 = base64.b64encode(f.read()).decode('utf-8')
         except Exception:
             divider_b64 = False
