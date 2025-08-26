@@ -20,9 +20,9 @@
       <field name="name">Consentimiento Informado</field>
       <field name="model">animal.consent</field>
       <field name="report_type">qweb-pdf</field>
-      <field name="report_name">vet.report_consent</field>
-      <field name="report_file">vet.report_consent</field>
-      <field name="paperformat_id" ref="vet.paperformat_consent_noheader"/>
+      <field name="report_name">vet_management.report_consent</field>
+      <field name="report_file">vet_management.report_consent</field>
+      <field name="paperformat_id" ref="vet_management.paperformat_consent_noheader"/>
       <field name="print_report_name">
         (object.sequence or 'Consentimiento') + ' - ' + (dict(object._fields['consent_type'].selection).get(object.consent_type) if object.consent_type else (object.consent_title or 'Documento')) + '.pdf'
       </field>
@@ -32,7 +32,7 @@
     <template id="report_consent">
       <t t-call="web.html_container">
         <t t-foreach="docs" t-as="doc">
-          <t t-call="vet.report_consent_document"/>
+          <t t-call="vet_management.report_consent_document"/>
           <div class="pagebreak"/>
         </t>
       </t>

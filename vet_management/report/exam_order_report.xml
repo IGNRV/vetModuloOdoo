@@ -20,9 +20,9 @@
       <field name="name">Orden de Examen</field>
       <field name="model">animal.exam.order</field>
       <field name="report_type">qweb-pdf</field>
-      <field name="report_name">vet.report_exam_order</field>
-      <field name="report_file">vet.report_exam_order</field>
-      <field name="paperformat_id" ref="vet.paperformat_exam_order_noheader"/>
+      <field name="report_name">vet_management.report_exam_order</field>
+      <field name="report_file">vet_management.report_exam_order</field>
+      <field name="paperformat_id" ref="vet_management.paperformat_exam_order_noheader"/>
       <!-- Cambiamos el nombre del archivo según el estado:
            - Si está 'done' => "... - Resultado.pdf"
            - En cualquier otro estado => "... - Orden.pdf" -->
@@ -35,7 +35,7 @@
     <template id="report_exam_order">
       <t t-call="web.html_container">
         <t t-foreach="docs" t-as="doc">
-          <t t-call="vet.report_exam_order_document"/>
+          <t t-call="vet_management.report_exam_order_document"/>
           <div class="pagebreak"/>
         </t>
       </t>
