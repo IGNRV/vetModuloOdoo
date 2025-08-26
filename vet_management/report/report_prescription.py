@@ -5,7 +5,7 @@ import base64
 
 
 class ReportPrescription(models.AbstractModel):
-    _name = 'report.vet.report_prescription'
+    _name = 'report.vet_management.report_prescription'
     _description = 'Report Prescription (PDF)'
 
     def _get_report_values(self, docids, data=None):
@@ -14,7 +14,7 @@ class ReportPrescription(models.AbstractModel):
         header_b64 = False
         # Reutilizamos el header de "visita" si existe en el módulo
         try:
-            with file_open('vet/static/src/img/visita_header.png', 'rb') as f:
+            with file_open('vet_management/static/src/img/visita_header.png', 'rb') as f:
                 header_b64 = base64.b64encode(f.read()).decode('utf-8')
         except Exception:
             header_b64 = False

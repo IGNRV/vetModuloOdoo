@@ -21,10 +21,10 @@
       <field name="name">Ficha Atención Veterinaria</field>
       <field name="model">animal.visit</field>
       <field name="report_type">qweb-pdf</field>
-      <field name="report_name">vet.report_visit</field>
-      <field name="report_file">vet.report_visit</field>
+      <field name="report_name">vet_management.report_visit</field>
+      <field name="report_file">vet_management.report_visit</field>
       <!-- Usamos el paperformat sin header -->
-      <field name="paperformat_id" ref="vet.paperformat_visit_noheader"/>
+      <field name="paperformat_id" ref="vet_management.paperformat_visit_noheader"/>
       <field name="print_report_name">
         (object.sequence or 'Visita') + ' - Ficha de Atención.pdf'
       </field>
@@ -34,7 +34,7 @@
     <template id="report_visit">
       <t t-call="web.html_container">
         <t t-foreach="docs" t-as="doc">
-          <t t-call="vet.report_visit_document"/>
+          <t t-call="vet_management.report_visit_document"/>
           <div class="pagebreak"/>
         </t>
       </t>
