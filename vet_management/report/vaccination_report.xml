@@ -20,9 +20,9 @@
       <field name="name">Registro de Vacunación</field>
       <field name="model">animal.vaccination</field>
       <field name="report_type">qweb-pdf</field>
-      <field name="report_name">vet.report_vaccination</field>
-      <field name="report_file">vet.report_vaccination</field>
-      <field name="paperformat_id" ref="vet.paperformat_vaccination_noheader"/>
+      <field name="report_name">vet_management.report_vaccination</field>
+      <field name="report_file">vet_management.report_vaccination</field>
+      <field name="paperformat_id" ref="vet_management.paperformat_vaccination_noheader"/>
       <field name="print_report_name">
         (object.animal_id and object.animal_id.name or 'Vacunación') + ' - ' + (object.vaccine_id and object.vaccine_id.name or 'Vacuna') + ' - Registro.pdf'
       </field>
@@ -32,7 +32,7 @@
     <template id="report_vaccination">
       <t t-call="web.html_container">
         <t t-foreach="docs" t-as="doc">
-          <t t-call="vet.report_vaccination_document"/>
+          <t t-call="vet_management.report_vaccination_document"/>
           <div class="pagebreak"/>
         </t>
       </t>

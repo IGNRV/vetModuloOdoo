@@ -4,7 +4,7 @@ from odoo.tools import file_open
 import base64
 
 class ReportSterilization(models.AbstractModel):
-    _name = 'report.vet.report_sterilization'
+    _name = 'report.vet_management.report_sterilization'
     _description = 'Report Sterilization (PDF)'
 
     def _get_report_values(self, docids, data=None):
@@ -13,9 +13,9 @@ class ReportSterilization(models.AbstractModel):
         img_b64 = False
         # Intentamos primero el header específico de esterilización
         paths_to_try = [
-            'vet/static/src/img/sterilizacion_header.png',
+            'vet_management/static/src/img/sterilizacion_header.png',
             # fallback por si se usa el mismo header de "visita"
-            'vet/static/src/img/visita_header.png',
+            'vet_management/static/src/img/visita_header.png',
         ]
         for p in paths_to_try:
             try:
