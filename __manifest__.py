@@ -11,11 +11,18 @@ Manage the animals that visit our veterinarian
     'author': "z99sys",
     'website': "https://z99sys.cl/",
     'license': 'AGPL-3',
+
+    # === NUEVO: precio y moneda para Odoo Apps ===
+    # Cambia 199.11 por el precio que quieras cobrar.
+    # Moneda permitida normalmente: 'USD' o 'EUR'.
+    'price': 20,
+    'currency': 'USD',
+
     'category': 'Animales',
     'version': '1.0',
 
     # any module necessary for this one to work correctly
-    'depends': ['base','mail'],
+    'depends': ['base', 'mail'],
 
     # always loaded
     'data': [
