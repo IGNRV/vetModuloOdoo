@@ -15,7 +15,7 @@ Manage the animals that visit our veterinarian
     # === NUEVO: precio y moneda para Odoo Apps ===
     # Cambia 199.11 por el precio que quieras cobrar.
     # Moneda permitida normalmente: 'USD' o 'EUR'.
-    'price': 20,
+    'price': 20.1,
     'currency': 'USD',
 
     'category': 'Animales',
